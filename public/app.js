@@ -1,6 +1,7 @@
 const STORAGE_KEY = "cout-cafe-prototype-v1";
 
 const today = new Date().toISOString().slice(0, 10);
+let storageMode = "browser";
 
 function addDays(date, days) {
   const next = new Date(`${date}T12:00:00Z`);
@@ -179,11 +180,12 @@ const seedState = {
   }
 };
 
-let state = loadState();
+let state = structuredClone(seedState);
 
 const els = {
   navTabs: document.querySelectorAll(".nav-tab"),
   views: document.querySelectorAll(".view"),
+  storageStatus: document.querySelector("#storageStatus"),
   metrics: document.querySelector("#metrics"),
   alertsList: document.querySelector("#alertsList"),
   alertCount: document.querySelector("#alertCount"),
@@ -228,19 +230,101 @@ const els = {
   exportData: document.querySelector("#exportData")
 };
 
-function loadState() {
+function normalizeState(candidate) {
+  const base = structuredClone(seedState);
+  if (!candidate || typeof candidate !== "object") return base;
+
+  return {
+    ...base,
+    ...candidate,
+    countries: Array.isArray(candidate.countries) ? candidate.countries : base.countries,
+    suppliers: Array.isArray(candidate.suppliers) ? candidate.suppliers : base.suppliers,
+    beans: Array.isArray(candidate.beans) ? candidate.beans : base.beans,
+    prices: Array.isArray(candidate.prices) ? candidate.prices : base.prices,
+    blends: Array.isArray(candidate.blends) ? candidate.blends : base.blends,
+    batches: Array.isArray(candidate.batches) ? candidate.batches : base.batches,
+    greenStocks: Array.isArray(candidate.greenStocks) ? candidate.greenStocks : base.greenStocks,
+    historicalOrders: Array.isArray(candidate.historicalOrders) ? candidate.historicalOrders : base.historicalOrders,
+    forecastSettings: {
+      ...base.forecastSettings,
+      ...(candidate.forecastSettings || {})
+    }
+  };
+}
+
+function loadBrowserState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return structuredClone(seedState);
 
   try {
-    return { ...structuredClone(seedState), ...JSON.parse(raw) };
+    return normalizeState(JSON.parse(raw));
   } catch {
     return structuredClone(seedState);
   }
 }
 
-function saveState() {
+function setStorageStatus(label, status = "muted") {
+  if (!els.storageStatus) return;
+  els.storageStatus.textContent = label;
+  els.storageStatus.className = `storage-status ${status}`;
+}
+
+function saveBrowserState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+async function loadState() {
+  const browserState = loadBrowserState();
+  state = browserState;
+
+  try {
+    const response = await fetch("/api/state", {
+      headers: { accept: "application/json" }
+    });
+
+    if (!response.ok) throw new Error("API state unavailable");
+
+    const payload = await response.json();
+    if (payload.storage !== "database") {
+      storageMode = "browser";
+      setStorageStatus("Mode navigateur", "muted");
+      return;
+    }
+
+    storageMode = "database";
+    state = normalizeState(payload.state || browserState);
+    saveBrowserState();
+
+    if (!payload.state) {
+      await saveState();
+      setStorageStatus("Base initialisée", "success");
+      return;
+    }
+
+    setStorageStatus("Base connectée", "success");
+  } catch {
+    storageMode = "browser";
+    setStorageStatus("Base indisponible", "warning");
+  }
+}
+
+async function saveState() {
+  saveBrowserState();
+
+  if (storageMode !== "database") return;
+
+  try {
+    const response = await fetch("/api/state", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ state })
+    });
+
+    if (!response.ok) throw new Error("Database save failed");
+    setStorageStatus("Base synchronisée", "success");
+  } catch {
+    setStorageStatus("Sauvegarde locale", "warning");
+  }
 }
 
 function formatMoney(value, currency = "EUR") {
@@ -1000,7 +1084,7 @@ function setupDefaults() {
   els.batchQuantity.value = "20";
 }
 
-function addPrice(event) {
+async function addPrice(event) {
   event.preventDefault();
 
   const price = {
@@ -1025,7 +1109,7 @@ function addPrice(event) {
   }
 
   state.prices.unshift(price);
-  saveState();
+  await saveState();
   els.priceForm.reset();
   els.priceFrom.value = today;
   renderAll();
@@ -1038,7 +1122,7 @@ function runCalculator(event) {
   renderCalculation(result, compareResult);
 }
 
-function runForecast(event) {
+async function runForecast(event) {
   event.preventDefault();
 
   state.forecastSettings = {
@@ -1051,12 +1135,12 @@ function runForecast(event) {
     safetyStockPct: Number(els.forecastSafety.value || 0)
   };
 
-  saveState();
+  await saveState();
   renderMetrics();
   renderForecast(calculateForecast(state.forecastSettings));
 }
 
-function addBatch(event) {
+async function addBatch(event) {
   event.preventDefault();
 
   const actualLoss = els.batchLoss.value ? Number(els.batchLoss.value) : null;
@@ -1095,7 +1179,7 @@ function addBatch(event) {
   };
 
   state.batches.unshift(batch);
-  saveState();
+  await saveState();
   renderAll();
 }
 
@@ -1111,11 +1195,12 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
-function resetDemo() {
-  const ok = window.confirm("Réinitialiser les données de démonstration ?");
+async function resetDemo() {
+  const target = storageMode === "database" ? "la base partagée" : "les données de démonstration";
+  const ok = window.confirm(`Réinitialiser ${target} ?`);
   if (!ok) return;
   state = structuredClone(seedState);
-  saveState();
+  await saveState();
   setupDefaults();
   renderAll();
   renderCalculation(calculateBlend(els.calcBlend.value, els.calcDate.value), calculateBlend(els.calcBlend.value, els.compareDate.value));
@@ -1138,7 +1223,12 @@ els.batchForm.addEventListener("submit", addBatch);
 els.exportData.addEventListener("click", exportData);
 els.resetDemo.addEventListener("click", resetDemo);
 
-setupNavigation();
-setupDefaults();
-renderAll();
-renderCalculation(calculateBlend(els.calcBlend.value, els.calcDate.value), calculateBlend(els.calcBlend.value, els.compareDate.value));
+async function initializeApp() {
+  setupNavigation();
+  await loadState();
+  setupDefaults();
+  renderAll();
+  renderCalculation(calculateBlend(els.calcBlend.value, els.calcDate.value), calculateBlend(els.calcBlend.value, els.compareDate.value));
+}
+
+void initializeApp();

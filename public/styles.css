@@ -160,7 +160,33 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
   gap: 10px;
+}
+
+.storage-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.storage-status.success {
+  border-color: rgba(82, 130, 91, 0.36);
+  background: #eef7ef;
+  color: #2f6a3b;
+}
+
+.storage-status.warning {
+  border-color: rgba(189, 121, 45, 0.4);
+  background: #fff7ea;
+  color: var(--accent-dark);
 }
 
 .primary,

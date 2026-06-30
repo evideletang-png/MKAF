@@ -13,7 +13,8 @@ Prototype interne Max Cafés pour suivre les tarifs datés des grains, calculer 
 - Conversion de la demande prévue en besoin de café vert par grain.
 - Alertes simples sur prix manquant, coût trop élevé et tarif bientôt expiré.
 - Création de batchs de production avec coût figé.
-- Sauvegarde locale dans le navigateur pour le prototype.
+- Sauvegarde PostgreSQL sur Railway via `DATABASE_URL`.
+- Sauvegarde locale dans le navigateur en mode secours si aucune base n'est configurée.
 
 ## Lancer en local
 
@@ -33,24 +34,46 @@ L'application est compatible Railway telle quelle :
 
 - runtime Node.js ;
 - script `npm start` ;
-- écoute sur `process.env.PORT`.
+- écoute sur `process.env.PORT` ;
+- connexion PostgreSQL optionnelle via `DATABASE_URL`.
 
 Étapes conseillées :
 
 1. Pousser ce dossier sur un dépôt GitHub privé.
 2. Créer un projet Railway depuis ce dépôt GitHub.
 3. Laisser Railway détecter l'application Node.js.
-4. Vérifier que la commande de démarrage est `npm start`.
-5. Générer un domaine public ou privé selon le besoin.
+4. Ajouter un service PostgreSQL dans le même projet Railway.
+5. Vérifier que le service web reçoit bien la variable `DATABASE_URL`.
+6. Vérifier que la commande de démarrage est `npm start`.
+7. Générer un domaine public ou privé selon le besoin.
 
-## Limite importante de cette V0
+## Base de données
 
-Les données sont stockées dans le `localStorage` du navigateur. C'est suffisant pour valider les calculs et les écrans, mais pas pour un usage multi-poste ou une production durable.
+Au démarrage, le serveur crée automatiquement une table PostgreSQL :
+
+```sql
+CREATE TABLE IF NOT EXISTS app_state (
+  key TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+Pour cette V1, l'état complet de l'outil est stocké dans une colonne `JSONB`. Cela permet de tester rapidement avec de vraies données, sans figer trop tôt un modèle relationnel complet. Les tarifs, les assemblages, les prévisions, les stocks, l'activité N-1 et les batchs sont donc persistés dans Railway.
+
+Endpoints utiles :
+
+- `GET /api/health` : vérifie si la base est connectée.
+- `GET /api/state` : charge l'état sauvegardé.
+- `POST /api/state` : sauvegarde l'état courant.
+
+## Limite importante
+
+Cette version persiste les données dans PostgreSQL, mais sans authentification. Il faut donc garder le déploiement privé tant que l'accès utilisateur n'est pas ajouté.
 
 La prochaine version devra ajouter :
 
-- une base PostgreSQL Railway ;
 - une authentification ;
 - des imports/exports CSV ;
-- une vraie API serveur ;
-- une sauvegarde des prix, assemblages, activité N-1, prévisions et batchs en base.
+- un schéma relationnel complet si l'outil sort du périmètre prototype ;
+- une gestion fine des grains, pays, fournisseurs et stocks depuis l'interface.

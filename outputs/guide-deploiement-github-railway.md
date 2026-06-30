@@ -1,54 +1,27 @@
 # Guide déploiement GitHub + Railway
 
-## Etat actuel
+## État actuel
 
-Le dépôt local est initialisé sur la branche `main`.
+Le dépôt GitHub est connecté :
 
-Commits existants :
-
-- `4119795` - Initial coffee cost prototype
-- `d296f51` - Add deployment guide
-
-Le push GitHub n'a pas encore ete fait car le jeton GitHub CLI local est invalide.
-
-Railway CLI est installe, mais pas authentifie.
-
-## 1. Re-authentifier GitHub CLI
-
-```bash
-gh auth login -h github.com
+```text
+git@github.com:evideletang-png/MKAF.git
 ```
 
-Puis vérifier :
+L'application est déployable sur Railway avec :
 
-```bash
-gh auth status
-```
+- runtime Node.js ;
+- commande de démarrage `npm start` ;
+- écoute automatique sur `process.env.PORT` ;
+- sauvegarde PostgreSQL dès que `DATABASE_URL` est disponible.
 
-## 2. Créer le dépôt GitHub privé et pousser
-
-Depuis le dossier du projet :
-
-```bash
-gh repo create outil-cout-cafe-torrefacteur --private --source=. --remote=origin --push
-```
-
-Cette commande crée un dépôt privé, ajoute le remote `origin` et pousse la branche `main`.
-
-Si le dépôt GitHub existe déjà :
-
-```bash
-git remote add origin git@github.com:VOTRE_COMPTE/outil-cout-cafe-torrefacteur.git
-git push -u origin main
-```
-
-## 3. Connecter Railway
+## 1. Connecter Railway au dépôt GitHub
 
 Dans Railway :
 
 1. Créer un nouveau projet.
 2. Choisir un déploiement depuis GitHub.
-3. Sélectionner le dépôt `outil-cout-cafe-torrefacteur`.
+3. Sélectionner le dépôt `evideletang-png/MKAF`.
 4. Laisser Railway détecter l'application Node.js.
 5. Vérifier que la commande de démarrage est :
 
@@ -56,45 +29,73 @@ Dans Railway :
 npm start
 ```
 
-6. Deployer.
+6. Déployer.
 7. Générer un domaine depuis les paramètres du service.
 
-## 4. Variables
+## 2. Ajouter PostgreSQL
 
-Aucune variable obligatoire pour la V0.
+Dans le même projet Railway :
 
-Railway fournit automatiquement `PORT`, utilise par le serveur :
+1. Ajouter un service PostgreSQL.
+2. Ouvrir le service web de l'application.
+3. Vérifier que la variable `DATABASE_URL` est bien disponible pour ce service web.
+4. Redéployer le service web.
 
-```js
-process.env.PORT || 3000
+Au démarrage, l'application crée automatiquement la table suivante :
+
+```sql
+CREATE TABLE IF NOT EXISTS app_state (
+  key TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
 
-Pour tester localement si besoin :
+## 3. Vérifier la connexion
 
-```bash
-HOST=127.0.0.1 npm start
+Ouvrir :
+
+```text
+https://votre-domaine-railway/api/health
 ```
 
-Sur Railway, ne pas définir `HOST` sauf besoin particulier.
+Réponse attendue :
 
-## 5. Vérification après déploiement
+```json
+{
+  "ok": true,
+  "storage": "database",
+  "database": "connected"
+}
+```
 
-Vérifier :
+Dans l'interface, le badge en haut à droite doit afficher `Base connectée`, `Base initialisée` ou `Base synchronisée`.
 
-- le tableau de bord ;
-- le calculateur sur `Espresso Maison` au `2026-02-15` ;
-- l'ajout d'un tarif ;
-- la création d'un batch ;
-- l'export JSON.
+## 4. Tester avec de vraies données
 
-## 6. Prochaine evolution technique
+Scénario de test conseillé :
 
-La V0 stocke les données dans le navigateur.
+1. Ajouter un tarif négocié avec une date de début et une date de fin.
+2. Rafraîchir la page.
+3. Vérifier que le tarif est toujours présent.
+4. Créer un batch de production.
+5. Rafraîchir la page.
+6. Vérifier que le batch est toujours présent.
+7. Modifier les facteurs de prévision.
+8. Rafraîchir la page.
+9. Vérifier que les paramètres de prévision sont conservés.
 
-Avant usage réel, ajouter :
+## 5. Mode secours
 
-- PostgreSQL Railway ;
-- authentification ;
-- API serveur ;
-- imports/exports CSV ;
-- sauvegarde des tarifs, assemblages et batchs en base.
+Si `DATABASE_URL` n'est pas configurée, l'application reste utilisable en mode navigateur. Les données sont alors stockées uniquement dans le `localStorage` du poste.
+
+Ce mode est utile en développement local, mais il ne convient pas aux tests multi-postes avec de vraies données.
+
+## 6. Suite recommandée
+
+Avant un usage réel durable :
+
+- ajouter une authentification ;
+- ajouter des imports/exports CSV ;
+- permettre la gestion complète des grains, fournisseurs, assemblages et stocks depuis l'interface ;
+- passer d'une persistance JSONB prototype à un modèle relationnel détaillé si les besoins métier se stabilisent.
