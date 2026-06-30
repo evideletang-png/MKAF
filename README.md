@@ -1,6 +1,6 @@
 # Outil cout cafe torrefacteur
 
-Prototype interne pour suivre les tarifs dates des grains, calculer le cout des assemblages et figer le cout des batchs de production.
+Prototype interne Max Cafes pour suivre les tarifs dates des grains, calculer le cout des assemblages, prevoir les commandes et figer le cout des batchs de production.
 
 ## Fonctionnalites de la V0
 
