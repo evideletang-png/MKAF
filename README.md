@@ -8,6 +8,9 @@ Prototype interne pour suivre les tarifs dates des grains, calculer le cout des 
 - Saisie de tarifs dates par grain et fournisseur.
 - Calcul du cout d'un assemblage a une date donnee.
 - Comparaison du cout entre deux dates.
+- Estimation de commandes par rapport a l'activite N-1 jour par jour.
+- Facteurs de prevision : croissance, saisonnalite, evenements, meteo, promos et stock de securite.
+- Conversion de la demande prevue en besoin de cafe vert par grain.
 - Alertes simples sur prix manquant, cout trop eleve et tarif bientot expire.
 - Creation de batchs de production avec cout fige.
 - Sauvegarde locale dans le navigateur pour le prototype.
@@ -50,4 +53,4 @@ La prochaine version devra ajouter :
 - une authentification ;
 - des imports/exports CSV ;
 - une vraie API serveur ;
-- une sauvegarde des prix, assemblages et batchs en base.
+- une sauvegarde des prix, assemblages, activite N-1, previsions et batchs en base.

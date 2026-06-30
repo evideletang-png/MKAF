@@ -2,6 +2,56 @@ const STORAGE_KEY = "cout-cafe-prototype-v1";
 
 const today = new Date().toISOString().slice(0, 10);
 
+function addDays(date, days) {
+  const next = new Date(`${date}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+function previousYearDate(date) {
+  const previous = new Date(`${date}T12:00:00Z`);
+  previous.setUTCFullYear(previous.getUTCFullYear() - 1);
+  return previous.toISOString().slice(0, 10);
+}
+
+function weekdayIndex(date) {
+  return new Date(`${date}T12:00:00Z`).getUTCDay();
+}
+
+function buildHistoricalOrders() {
+  const start = "2025-06-30";
+  const orders = [];
+
+  for (let day = 0; day < 70; day += 1) {
+    const date = addDays(start, day);
+    const weekday = weekdayIndex(date);
+    const weekendBoost = weekday === 0 || weekday === 6 ? 1.32 : 1;
+    const fridayBoost = weekday === 5 ? 1.18 : 1;
+    const summerBoost = date >= "2025-07-10" && date <= "2025-08-25" ? 1.16 : 1;
+    const localEventBoost = ["2025-07-14", "2025-08-15"].includes(date) ? 1.45 : 1;
+    const rhythm = 1 + Math.sin(day / 4) * 0.08;
+    const multiplier = weekendBoost * fridayBoost * summerBoost * localEventBoost * rhythm;
+
+    orders.push({
+      id: `order-${date}-espresso`,
+      date,
+      blendId: "blend-espresso-maison",
+      roastedKg: Number((18 * multiplier).toFixed(2)),
+      channel: weekday === 0 || weekday === 6 ? "boutique" : "mixte"
+    });
+
+    orders.push({
+      id: `order-${date}-filtre`,
+      date,
+      blendId: "blend-filtre-doux",
+      roastedKg: Number((9 * multiplier * (weekday === 2 ? 1.2 : 1)).toFixed(2)),
+      channel: "mixte"
+    });
+  }
+
+  return orders;
+}
+
 const seedState = {
   countries: [
     { id: "country-br", name: "Bresil", region: "Amerique latine" },
@@ -111,7 +161,22 @@ const seedState = {
       ]
     }
   ],
-  batches: []
+  batches: [],
+  greenStocks: [
+    { beanId: "bean-bresil-santos", quantityKg: 115 },
+    { beanId: "bean-colombie-excelso", quantityKg: 82 },
+    { beanId: "bean-ethiopie-sidamo", quantityKg: 54 }
+  ],
+  historicalOrders: buildHistoricalOrders(),
+  forecastSettings: {
+    startDate: "2026-07-01",
+    horizonDays: 14,
+    growthPct: 6,
+    seasonalityPct: 4,
+    externalPct: 0,
+    knownOrdersPct: 0,
+    safetyStockPct: 12
+  }
 };
 
 let state = loadState();
@@ -139,6 +204,18 @@ const els = {
   compareDate: document.querySelector("#compareDate"),
   calcResult: document.querySelector("#calcResult"),
   calcLines: document.querySelector("#calcLines"),
+  forecastForm: document.querySelector("#forecastForm"),
+  forecastStart: document.querySelector("#forecastStart"),
+  forecastHorizon: document.querySelector("#forecastHorizon"),
+  forecastGrowth: document.querySelector("#forecastGrowth"),
+  forecastSeason: document.querySelector("#forecastSeason"),
+  forecastExternal: document.querySelector("#forecastExternal"),
+  forecastKnownOrders: document.querySelector("#forecastKnownOrders"),
+  forecastSafety: document.querySelector("#forecastSafety"),
+  forecastMetrics: document.querySelector("#forecastMetrics"),
+  forecastBeanNeeds: document.querySelector("#forecastBeanNeeds"),
+  forecastBlendNeeds: document.querySelector("#forecastBlendNeeds"),
+  forecastDailyRows: document.querySelector("#forecastDailyRows"),
   batchForm: document.querySelector("#batchForm"),
   batchBlend: document.querySelector("#batchBlend"),
   batchDate: document.querySelector("#batchDate"),
@@ -179,6 +256,11 @@ function formatMoney(value, currency = "EUR") {
 function formatPct(value) {
   if (!Number.isFinite(value)) return "-";
   return `${value.toFixed(1).replace(".", ",")} %`;
+}
+
+function formatKg(value) {
+  if (!Number.isFinite(value)) return "-";
+  return `${value.toFixed(1).replace(".", ",")} kg`;
 }
 
 function getById(collection, id) {
@@ -297,6 +379,134 @@ function calculateBlend(blendId, date, overrideLossPct) {
   };
 }
 
+function sumHistoricalKg(date, blendId) {
+  return (state.historicalOrders || [])
+    .filter((order) => order.date === date && order.blendId === blendId)
+    .reduce((sum, order) => sum + Number(order.roastedKg || 0), 0);
+}
+
+function averageHistoricalKgForWeekday(blendId, weekday) {
+  const rows = (state.historicalOrders || []).filter((order) => {
+    return order.blendId === blendId && weekdayIndex(order.date) === weekday;
+  });
+
+  if (rows.length === 0) return 0;
+  return rows.reduce((sum, order) => sum + Number(order.roastedKg || 0), 0) / rows.length;
+}
+
+function averageHistoricalKg(blendId) {
+  const rows = (state.historicalOrders || []).filter((order) => order.blendId === blendId);
+  if (rows.length === 0) return 0;
+  return rows.reduce((sum, order) => sum + Number(order.roastedKg || 0), 0) / rows.length;
+}
+
+function factorMultiplier(settings) {
+  return [
+    settings.growthPct,
+    settings.seasonalityPct,
+    settings.externalPct,
+    settings.knownOrdersPct
+  ].reduce((multiplier, pct) => multiplier * (1 + Number(pct || 0) / 100), 1);
+}
+
+function calculateForecast(settings = state.forecastSettings) {
+  const safeSettings = {
+    ...seedState.forecastSettings,
+    ...(settings || {})
+  };
+  const horizonDays = Math.max(1, Math.min(90, Number(safeSettings.horizonDays || 14)));
+  const multiplier = factorMultiplier(safeSettings);
+  const dailyRows = [];
+  const blendTotals = new Map();
+  const beanTotals = new Map();
+
+  for (let day = 0; day < horizonDays; day += 1) {
+    const date = addDays(safeSettings.startDate, day);
+    const n1Date = previousYearDate(date);
+    const weekday = weekdayIndex(date);
+    let dayN1Kg = 0;
+    let dayForecastKg = 0;
+    let confidenceScore = 0;
+
+    state.blends.forEach((blend) => {
+      const n1Kg = sumHistoricalKg(n1Date, blend.id);
+      const weekdayAverage = averageHistoricalKgForWeekday(blend.id, weekday);
+      const fallbackAverage = averageHistoricalKg(blend.id);
+      const statisticalBase = weekdayAverage || fallbackAverage;
+      const baseKg = n1Kg > 0 ? n1Kg * 0.75 + statisticalBase * 0.25 : statisticalBase;
+      const forecastKg = baseKg * multiplier;
+      const confidence = n1Kg > 0 ? "Haute" : statisticalBase > 0 ? "Moyenne" : "Faible";
+
+      dayN1Kg += n1Kg;
+      dayForecastKg += forecastKg;
+      confidenceScore += confidence === "Haute" ? 3 : confidence === "Moyenne" ? 2 : 1;
+
+      const existingBlend = blendTotals.get(blend.id) || {
+        blend,
+        n1Kg: 0,
+        forecastRoastedKg: 0,
+        forecastGreenKg: 0
+      };
+      const greenKg = forecastKg / (1 - blend.roastLossPct / 100);
+      existingBlend.n1Kg += n1Kg;
+      existingBlend.forecastRoastedKg += forecastKg;
+      existingBlend.forecastGreenKg += greenKg;
+      blendTotals.set(blend.id, existingBlend);
+
+      blend.components.forEach((component) => {
+        const beanNeed = greenKg * (component.percentage / 100);
+        const existingBean = beanTotals.get(component.beanId) || {
+          bean: getById("beans", component.beanId),
+          requiredKg: 0
+        };
+        existingBean.requiredKg += beanNeed;
+        beanTotals.set(component.beanId, existingBean);
+      });
+    });
+
+    dailyRows.push({
+      date,
+      n1Date,
+      n1Kg: dayN1Kg,
+      forecastKg: dayForecastKg,
+      confidence:
+        confidenceScore / Math.max(state.blends.length, 1) >= 2.7
+          ? "Haute"
+          : confidenceScore / Math.max(state.blends.length, 1) >= 1.8
+            ? "Moyenne"
+            : "Faible"
+    });
+  }
+
+  const beanNeeds = [...beanTotals.values()].map((need) => {
+    const stock = (state.greenStocks || []).find((item) => item.beanId === need.bean?.id);
+    const stockKg = Number(stock?.quantityKg || 0);
+    const requiredWithSafetyKg = need.requiredKg * (1 + Number(safeSettings.safetyStockPct || 0) / 100);
+    return {
+      ...need,
+      stockKg,
+      safetyStockPct: Number(safeSettings.safetyStockPct || 0),
+      requiredWithSafetyKg,
+      orderKg: Math.max(0, requiredWithSafetyKg - stockKg)
+    };
+  });
+
+  const totalForecastRoastedKg = dailyRows.reduce((sum, row) => sum + row.forecastKg, 0);
+  const totalGreenRequiredKg = beanNeeds.reduce((sum, row) => sum + row.requiredKg, 0);
+  const totalOrderKg = beanNeeds.reduce((sum, row) => sum + row.orderKg, 0);
+
+  return {
+    settings: safeSettings,
+    dailyRows,
+    blendNeeds: [...blendTotals.values()],
+    beanNeeds,
+    totalForecastRoastedKg,
+    totalGreenRequiredKg,
+    totalOrderKg,
+    multiplier
+  };
+}
+
 function calculateAlerts(date = today) {
   const alerts = [];
 
@@ -367,13 +577,13 @@ function renderSelects() {
 function renderMetrics() {
   const alerts = calculateAlerts();
   const validPrices = state.prices.filter((price) => dateInRange(today, price.validFrom, price.validTo));
-  const latestBatch = state.batches[0];
+  const forecast = calculateForecast();
 
   els.metrics.innerHTML = [
     ["Grains suivis", state.beans.length, "References cafe vert"],
     ["Tarifs saisis", state.prices.length, `${validPrices.length} actifs aujourd'hui`],
     ["Assemblages", state.blends.length, "Recettes surveillees"],
-    ["Dernier batch", latestBatch ? formatMoney(latestBatch.frozenTotalCostPerKg) : "-", latestBatch ? latestBatch.productionDate : "Aucun batch"]
+    ["Prevision 14j", formatKg(forecast.totalForecastRoastedKg), `${formatKg(forecast.totalOrderKg)} a commander`]
   ]
     .map(
       ([label, value, helper]) => `
@@ -512,6 +722,128 @@ function renderCalculation(result, compareResult) {
   els.calcLines.innerHTML = renderLinesTable(result.lines);
 }
 
+function renderForecast(result = calculateForecast()) {
+  els.forecastMetrics.innerHTML = [
+    ["Demande prevue", formatKg(result.totalForecastRoastedKg), "Cafe torrefie sur l'horizon"],
+    ["Besoin cafe vert", formatKg(result.totalGreenRequiredKg), "Avant stock de securite"],
+    ["A commander", formatKg(result.totalOrderKg), "Apres stock disponible"],
+    ["Facteur global", formatPct((result.multiplier - 1) * 100), "Croissance, saison, contexte"]
+  ]
+    .map(
+      ([label, value, helper]) => `
+        <article class="metric">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <small>${escapeHtml(helper)}</small>
+        </article>
+      `
+    )
+    .join("");
+
+  els.forecastBeanNeeds.innerHTML = renderBeanNeedsTable(result.beanNeeds);
+  els.forecastBlendNeeds.innerHTML = renderBlendNeedsTable(result.blendNeeds);
+  els.forecastDailyRows.innerHTML = renderDailyForecastTable(result.dailyRows, result.multiplier);
+}
+
+function renderBeanNeedsTable(rows) {
+  if (!rows || rows.length === 0) return emptyState();
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Grain</th>
+          <th class="numeric">Besoin brut</th>
+          <th class="numeric">Avec securite</th>
+          <th class="numeric">Stock</th>
+          <th class="numeric">A commander</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            (row) => `
+              <tr>
+                <td>${escapeHtml(row.bean?.commercialName || "-")}</td>
+                <td class="numeric">${escapeHtml(formatKg(row.requiredKg))}</td>
+                <td class="numeric">${escapeHtml(formatKg(row.requiredWithSafetyKg))}</td>
+                <td class="numeric">${escapeHtml(formatKg(row.stockKg))}</td>
+                <td class="numeric"><strong>${escapeHtml(formatKg(row.orderKg))}</strong></td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderBlendNeedsTable(rows) {
+  if (!rows || rows.length === 0) return emptyState();
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Assemblage</th>
+          <th class="numeric">N-1</th>
+          <th class="numeric">Prevu torrefie</th>
+          <th class="numeric">Besoin vert</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            (row) => `
+              <tr>
+                <td>${escapeHtml(row.blend.name)}</td>
+                <td class="numeric">${escapeHtml(formatKg(row.n1Kg))}</td>
+                <td class="numeric"><strong>${escapeHtml(formatKg(row.forecastRoastedKg))}</strong></td>
+                <td class="numeric">${escapeHtml(formatKg(row.forecastGreenKg))}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderDailyForecastTable(rows, multiplier) {
+  if (!rows || rows.length === 0) return emptyState();
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Reference N-1</th>
+          <th class="numeric">Activite N-1</th>
+          <th class="numeric">Prevision</th>
+          <th class="numeric">Facteur</th>
+          <th>Confiance</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            (row) => `
+              <tr>
+                <td>${escapeHtml(row.date)}</td>
+                <td>${escapeHtml(row.n1Date)}</td>
+                <td class="numeric">${escapeHtml(formatKg(row.n1Kg))}</td>
+                <td class="numeric"><strong>${escapeHtml(formatKg(row.forecastKg))}</strong></td>
+                <td class="numeric">${escapeHtml(formatPct((multiplier - 1) * 100))}</td>
+                <td>${escapeHtml(row.confidence)}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
 function renderLinesTable(lines) {
   if (!lines || lines.length === 0) return emptyState();
 
@@ -643,14 +975,27 @@ function renderAll() {
   renderAlerts();
   renderBlendCards();
   renderPrices();
+  renderForecast();
   renderBatches();
   renderDataTables();
 }
 
 function setupDefaults() {
+  const forecastSettings = {
+    ...seedState.forecastSettings,
+    ...(state.forecastSettings || {})
+  };
+
   els.priceFrom.value = today;
   els.calcDate.value = "2026-02-15";
   els.compareDate.value = "2026-01-15";
+  els.forecastStart.value = forecastSettings.startDate;
+  els.forecastHorizon.value = forecastSettings.horizonDays;
+  els.forecastGrowth.value = forecastSettings.growthPct;
+  els.forecastSeason.value = forecastSettings.seasonalityPct;
+  els.forecastExternal.value = forecastSettings.externalPct;
+  els.forecastKnownOrders.value = forecastSettings.knownOrdersPct;
+  els.forecastSafety.value = forecastSettings.safetyStockPct;
   els.batchDate.value = today;
   els.batchQuantity.value = "20";
 }
@@ -691,6 +1036,24 @@ function runCalculator(event) {
   const result = calculateBlend(els.calcBlend.value, els.calcDate.value);
   const compareResult = els.compareDate.value ? calculateBlend(els.calcBlend.value, els.compareDate.value) : null;
   renderCalculation(result, compareResult);
+}
+
+function runForecast(event) {
+  event.preventDefault();
+
+  state.forecastSettings = {
+    startDate: els.forecastStart.value,
+    horizonDays: Number(els.forecastHorizon.value),
+    growthPct: Number(els.forecastGrowth.value || 0),
+    seasonalityPct: Number(els.forecastSeason.value || 0),
+    externalPct: Number(els.forecastExternal.value || 0),
+    knownOrdersPct: Number(els.forecastKnownOrders.value || 0),
+    safetyStockPct: Number(els.forecastSafety.value || 0)
+  };
+
+  saveState();
+  renderMetrics();
+  renderForecast(calculateForecast(state.forecastSettings));
 }
 
 function addBatch(event) {
@@ -770,6 +1133,7 @@ function setupNavigation() {
 
 els.priceForm.addEventListener("submit", addPrice);
 els.calculatorForm.addEventListener("submit", runCalculator);
+els.forecastForm.addEventListener("submit", runForecast);
 els.batchForm.addEventListener("submit", addBatch);
 els.exportData.addEventListener("click", exportData);
 els.resetDemo.addEventListener("click", resetDemo);

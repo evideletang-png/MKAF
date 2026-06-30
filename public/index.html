@@ -21,6 +21,7 @@
           <button class="nav-tab active" data-view="dashboard" type="button">Tableau de bord</button>
           <button class="nav-tab" data-view="prices" type="button">Tarifs dates</button>
           <button class="nav-tab" data-view="calculator" type="button">Calculateur</button>
+          <button class="nav-tab" data-view="forecast" type="button">Previsions</button>
           <button class="nav-tab" data-view="production" type="button">Production</button>
           <button class="nav-tab" data-view="data" type="button">Donnees</button>
         </nav>
@@ -157,6 +158,69 @@
               <div id="calcLines" class="table-wrap"></div>
             </section>
           </div>
+        </section>
+
+        <section class="view" id="forecast">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Estimation de commande N-1</h2>
+            </div>
+            <form class="form-grid forecast-form" id="forecastForm">
+              <label>
+                Debut
+                <input id="forecastStart" type="date" required />
+              </label>
+              <label>
+                Horizon jours
+                <input id="forecastHorizon" inputmode="numeric" min="1" max="90" step="1" type="number" required />
+              </label>
+              <label>
+                Croissance vs N-1 %
+                <input id="forecastGrowth" inputmode="decimal" step="0.1" type="number" />
+              </label>
+              <label>
+                Saison / contexte %
+                <input id="forecastSeason" inputmode="decimal" step="0.1" type="number" />
+              </label>
+              <label>
+                Evenements / meteo %
+                <input id="forecastExternal" inputmode="decimal" step="0.1" type="number" />
+              </label>
+              <label>
+                Promo / commandes connues %
+                <input id="forecastKnownOrders" inputmode="decimal" step="0.1" type="number" />
+              </label>
+              <label>
+                Stock securite %
+                <input id="forecastSafety" inputmode="decimal" min="0" step="0.1" type="number" />
+              </label>
+              <button class="primary align-end" type="submit">Calculer la prevision</button>
+            </form>
+          </section>
+
+          <div class="metric-grid" id="forecastMetrics"></div>
+
+          <div class="section-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Commande conseillee cafe vert</h2>
+              </div>
+              <div id="forecastBeanNeeds" class="table-wrap"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Demande prevue par assemblage</h2>
+              </div>
+              <div id="forecastBlendNeeds" class="table-wrap"></div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Prevision jour par jour</h2>
+            </div>
+            <div id="forecastDailyRows" class="table-wrap"></div>
+          </section>
         </section>
 
         <section class="view" id="production">
