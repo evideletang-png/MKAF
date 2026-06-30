@@ -37,7 +37,8 @@
           </div>
           <div class="topbar-actions">
             <span class="storage-status muted" id="storageStatus">Connexion...</span>
-            <button class="secondary" id="resetDemo" type="button">Réinitialiser la démo</button>
+            <button class="secondary" id="clearData" type="button">Démarrer à vide</button>
+            <button class="secondary" id="resetDemo" type="button">Recharger la démo</button>
             <button class="primary" id="exportData" type="button">Exporter JSON</button>
           </div>
         </header>
@@ -277,15 +278,226 @@
           <div class="section-grid">
             <section class="panel">
               <div class="panel-heading">
+                <h2>Pays producteurs</h2>
+              </div>
+              <form class="form-grid compact" id="countryForm">
+                <label>
+                  Pays
+                  <input id="countryName" type="text" placeholder="Brésil" required />
+                </label>
+                <label>
+                  Région
+                  <input id="countryRegion" type="text" placeholder="Amérique latine" />
+                </label>
+                <button class="primary align-end" type="submit">Ajouter</button>
+              </form>
+              <div class="table-wrap spaced">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Pays</th>
+                      <th>Région</th>
+                    </tr>
+                  </thead>
+                  <tbody id="countryRows"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Fournisseurs</h2>
+              </div>
+              <form class="form-grid compact" id="supplierForm">
+                <label>
+                  Nom
+                  <input id="supplierName" type="text" placeholder="Importateur, coopérative..." required />
+                </label>
+                <label>
+                  Devise
+                  <select id="supplierCurrency" required>
+                    <option>EUR</option>
+                    <option>USD</option>
+                  </select>
+                </label>
+                <button class="primary align-end" type="submit">Ajouter</button>
+              </form>
+              <div class="table-wrap spaced">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fournisseur</th>
+                      <th>Devise</th>
+                    </tr>
+                  </thead>
+                  <tbody id="supplierRows"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel full-span">
+              <div class="panel-heading">
                 <h2>Grains</h2>
               </div>
-              <div id="beanRows" class="table-wrap"></div>
+              <form class="form-grid" id="beanForm">
+                <label>
+                  Nom commercial
+                  <input id="beanName" type="text" placeholder="Brésil Santos, Colombie Excelso..." required />
+                </label>
+                <label>
+                  Pays
+                  <select id="beanCountry" required></select>
+                </label>
+                <label>
+                  Fournisseur par défaut
+                  <select id="beanSupplier" required></select>
+                </label>
+                <label>
+                  Type
+                  <input id="beanSpecies" type="text" placeholder="arabica, robusta..." />
+                </label>
+                <label>
+                  Process
+                  <input id="beanProcess" type="text" placeholder="lavé, naturel, honey..." />
+                </label>
+                <button class="primary align-end" type="submit">Ajouter le grain</button>
+              </form>
+              <div id="beanRows" class="table-wrap spaced"></div>
             </section>
-            <section class="panel">
+
+            <section class="panel full-span">
               <div class="panel-heading">
                 <h2>Assemblages</h2>
               </div>
-              <div id="blendRows" class="table-wrap"></div>
+              <form class="form-grid" id="blendForm">
+                <label>
+                  Nom
+                  <input id="blendName" type="text" placeholder="Espresso Maison" required />
+                </label>
+                <label>
+                  Perte torréfaction %
+                  <input id="blendLoss" inputmode="decimal" min="0" max="50" step="0.1" type="number" value="15" required />
+                </label>
+                <label>
+                  Prix cible / kg
+                  <input id="blendTargetPrice" inputmode="decimal" min="0" step="0.01" type="number" />
+                </label>
+                <label>
+                  Seuil coût / kg
+                  <input id="blendMaxCost" inputmode="decimal" min="0" step="0.01" type="number" />
+                </label>
+                <label>
+                  Packaging / kg
+                  <input id="blendPackaging" inputmode="decimal" min="0" step="0.01" type="number" value="0.55" />
+                </label>
+                <label>
+                  Énergie / kg
+                  <input id="blendEnergy" inputmode="decimal" min="0" step="0.01" type="number" value="0.22" />
+                </label>
+                <label>
+                  Logistique / kg
+                  <input id="blendLogistics" inputmode="decimal" min="0" step="0.01" type="number" value="0.18" />
+                </label>
+                <div class="full-wide">
+                  <span class="field-label">Composition</span>
+                  <div class="component-editor" id="blendComponents">
+                    <div class="component-row">
+                      <select class="blend-component-bean"></select>
+                      <input class="blend-component-percentage" inputmode="decimal" min="0" max="100" step="0.1" type="number" placeholder="%" />
+                    </div>
+                    <div class="component-row">
+                      <select class="blend-component-bean"></select>
+                      <input class="blend-component-percentage" inputmode="decimal" min="0" max="100" step="0.1" type="number" placeholder="%" />
+                    </div>
+                    <div class="component-row">
+                      <select class="blend-component-bean"></select>
+                      <input class="blend-component-percentage" inputmode="decimal" min="0" max="100" step="0.1" type="number" placeholder="%" />
+                    </div>
+                    <div class="component-row">
+                      <select class="blend-component-bean"></select>
+                      <input class="blend-component-percentage" inputmode="decimal" min="0" max="100" step="0.1" type="number" placeholder="%" />
+                    </div>
+                    <div class="component-row">
+                      <select class="blend-component-bean"></select>
+                      <input class="blend-component-percentage" inputmode="decimal" min="0" max="100" step="0.1" type="number" placeholder="%" />
+                    </div>
+                  </div>
+                </div>
+                <button class="primary align-end" type="submit">Créer l'assemblage</button>
+              </form>
+              <div id="blendRows" class="table-wrap spaced"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Stock café vert</h2>
+              </div>
+              <form class="form-grid compact" id="stockForm">
+                <label>
+                  Grain
+                  <select id="stockBean" required></select>
+                </label>
+                <label>
+                  Stock kg
+                  <input id="stockQuantity" inputmode="decimal" min="0" step="0.1" type="number" required />
+                </label>
+                <button class="primary align-end" type="submit">Mettre à jour</button>
+              </form>
+              <div class="table-wrap spaced">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Grain</th>
+                      <th class="numeric">Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stockRows"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Activité N-1</h2>
+                <span class="muted" id="historyRowsCount"></span>
+              </div>
+              <form class="form-grid compact" id="historyForm">
+                <label>
+                  Date
+                  <input id="historyDate" type="date" required />
+                </label>
+                <label>
+                  Assemblage
+                  <select id="historyBlend" required></select>
+                </label>
+                <label>
+                  Kg torréfiés
+                  <input id="historyKg" inputmode="decimal" min="0.1" step="0.1" type="number" required />
+                </label>
+                <label>
+                  Canal
+                  <select id="historyChannel">
+                    <option value="mixte">Mixte</option>
+                    <option value="boutique">Boutique</option>
+                    <option value="b2b">B2B</option>
+                    <option value="web">Web</option>
+                  </select>
+                </label>
+                <button class="primary align-end" type="submit">Ajouter</button>
+              </form>
+              <div class="table-wrap spaced">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Assemblage</th>
+                      <th class="numeric">Kg</th>
+                      <th>Canal</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyRows"></tbody>
+                </table>
+              </div>
             </section>
           </div>
         </section>

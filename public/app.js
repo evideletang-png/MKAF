@@ -180,6 +180,20 @@ const seedState = {
   }
 };
 
+function buildEmptyState() {
+  return {
+    countries: [],
+    suppliers: [],
+    beans: [],
+    prices: [],
+    blends: [],
+    batches: [],
+    greenStocks: [],
+    historicalOrders: [],
+    forecastSettings: structuredClone(seedState.forecastSettings)
+  };
+}
+
 let state = structuredClone(seedState);
 
 const els = {
@@ -224,8 +238,44 @@ const els = {
   batchQuantity: document.querySelector("#batchQuantity"),
   batchLoss: document.querySelector("#batchLoss"),
   batchRows: document.querySelector("#batchRows"),
+  countryForm: document.querySelector("#countryForm"),
+  countryName: document.querySelector("#countryName"),
+  countryRegion: document.querySelector("#countryRegion"),
+  countryRows: document.querySelector("#countryRows"),
+  supplierForm: document.querySelector("#supplierForm"),
+  supplierName: document.querySelector("#supplierName"),
+  supplierCurrency: document.querySelector("#supplierCurrency"),
+  supplierRows: document.querySelector("#supplierRows"),
+  beanForm: document.querySelector("#beanForm"),
+  beanName: document.querySelector("#beanName"),
+  beanCountry: document.querySelector("#beanCountry"),
+  beanSupplier: document.querySelector("#beanSupplier"),
+  beanSpecies: document.querySelector("#beanSpecies"),
+  beanProcess: document.querySelector("#beanProcess"),
   beanRows: document.querySelector("#beanRows"),
+  blendForm: document.querySelector("#blendForm"),
+  blendName: document.querySelector("#blendName"),
+  blendLoss: document.querySelector("#blendLoss"),
+  blendTargetPrice: document.querySelector("#blendTargetPrice"),
+  blendMaxCost: document.querySelector("#blendMaxCost"),
+  blendPackaging: document.querySelector("#blendPackaging"),
+  blendEnergy: document.querySelector("#blendEnergy"),
+  blendLogistics: document.querySelector("#blendLogistics"),
+  blendComponentBeans: document.querySelectorAll(".blend-component-bean"),
+  blendComponentPercentages: document.querySelectorAll(".blend-component-percentage"),
   blendRows: document.querySelector("#blendRows"),
+  stockForm: document.querySelector("#stockForm"),
+  stockBean: document.querySelector("#stockBean"),
+  stockQuantity: document.querySelector("#stockQuantity"),
+  stockRows: document.querySelector("#stockRows"),
+  historyForm: document.querySelector("#historyForm"),
+  historyDate: document.querySelector("#historyDate"),
+  historyBlend: document.querySelector("#historyBlend"),
+  historyKg: document.querySelector("#historyKg"),
+  historyChannel: document.querySelector("#historyChannel"),
+  historyRows: document.querySelector("#historyRows"),
+  historyRowsCount: document.querySelector("#historyRowsCount"),
+  clearData: document.querySelector("#clearData"),
   resetDemo: document.querySelector("#resetDemo"),
   exportData: document.querySelector("#exportData")
 };
@@ -358,6 +408,30 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function slugify(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 48);
+}
+
+function createId(prefix, label) {
+  const suffix = slugify(label) || crypto.randomUUID().slice(0, 8);
+  return `${prefix}-${suffix}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+function numberValue(input, fallback = 0) {
+  const value = Number(input.value);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function emptyTableRow(colspan, label = "Aucune donnée") {
+  return `<tr><td colspan="${colspan}">${escapeHtml(label)}</td></tr>`;
 }
 
 function dateInRange(date, from, to) {
@@ -645,8 +719,12 @@ function renderSelects() {
   const beanOptions = state.beans
     .map((bean) => `<option value="${escapeHtml(bean.id)}">${escapeHtml(bean.commercialName)}</option>`)
     .join("");
+  const beanOptionsWithBlank = `<option value="">Choisir un grain</option>${beanOptions}`;
   const supplierOptions = state.suppliers
     .map((supplier) => `<option value="${escapeHtml(supplier.id)}">${escapeHtml(supplier.name)}</option>`)
+    .join("");
+  const countryOptions = state.countries
+    .map((country) => `<option value="${escapeHtml(country.id)}">${escapeHtml(country.name)}</option>`)
     .join("");
   const blendOptions = state.blends
     .map((blend) => `<option value="${escapeHtml(blend.id)}">${escapeHtml(blend.name)}</option>`)
@@ -656,6 +734,13 @@ function renderSelects() {
   els.priceSupplier.innerHTML = supplierOptions;
   els.calcBlend.innerHTML = blendOptions;
   els.batchBlend.innerHTML = blendOptions;
+  els.beanCountry.innerHTML = countryOptions;
+  els.beanSupplier.innerHTML = supplierOptions;
+  els.stockBean.innerHTML = beanOptions;
+  els.historyBlend.innerHTML = blendOptions;
+  els.blendComponentBeans.forEach((select) => {
+    select.innerHTML = beanOptionsWithBlank;
+  });
 }
 
 function renderMetrics() {
@@ -711,7 +796,7 @@ function renderAlerts() {
 function renderBlendCards() {
   els.blendCards.innerHTML = state.blends
     .map((blend) => {
-      const result = calculateBlend(blend.id, "2026-02-15");
+      const result = calculateBlend(blend.id, today);
       const cost = result.status === "ok" ? formatMoney(result.totalCostPerKg) : "Prix manquant";
       const composition = blend.components
         .map((component) => {
@@ -989,6 +1074,32 @@ function renderBatches() {
 }
 
 function renderDataTables() {
+  els.countryRows.innerHTML = state.countries.length
+    ? state.countries
+        .map(
+          (country) => `
+            <tr>
+              <td>${escapeHtml(country.name)}</td>
+              <td>${escapeHtml(country.region || "-")}</td>
+            </tr>
+          `
+        )
+        .join("")
+    : emptyTableRow(2);
+
+  els.supplierRows.innerHTML = state.suppliers.length
+    ? state.suppliers
+        .map(
+          (supplier) => `
+            <tr>
+              <td>${escapeHtml(supplier.name)}</td>
+              <td>${escapeHtml(supplier.defaultCurrency || "EUR")}</td>
+            </tr>
+          `
+        )
+        .join("")
+    : emptyTableRow(2);
+
   els.beanRows.innerHTML = `
     <table>
       <thead>
@@ -997,23 +1108,29 @@ function renderDataTables() {
           <th>Pays</th>
           <th>Fournisseur</th>
           <th>Type</th>
+          <th>Process</th>
         </tr>
       </thead>
       <tbody>
-        ${state.beans
-          .map((bean) => {
-            const country = getById("countries", bean.countryId);
-            const supplier = getById("suppliers", bean.defaultSupplierId);
-            return `
-              <tr>
-                <td>${escapeHtml(bean.commercialName)}</td>
-                <td>${escapeHtml(country?.name || "-")}</td>
-                <td>${escapeHtml(supplier?.name || "-")}</td>
-                <td>${escapeHtml(bean.species)}</td>
-              </tr>
-            `;
-          })
-          .join("")}
+        ${
+          state.beans.length
+            ? state.beans
+                .map((bean) => {
+                  const country = getById("countries", bean.countryId);
+                  const supplier = getById("suppliers", bean.defaultSupplierId);
+                  return `
+                    <tr>
+                      <td>${escapeHtml(bean.commercialName)}</td>
+                      <td>${escapeHtml(country?.name || "-")}</td>
+                      <td>${escapeHtml(supplier?.name || "-")}</td>
+                      <td>${escapeHtml(bean.species || "-")}</td>
+                      <td>${escapeHtml(bean.process || "-")}</td>
+                    </tr>
+                  `;
+                })
+                .join("")
+            : emptyTableRow(5)
+        }
       </tbody>
     </table>
   `;
@@ -1025,32 +1142,73 @@ function renderDataTables() {
           <th>Assemblage</th>
           <th>Composition</th>
           <th class="numeric">Perte</th>
+          <th class="numeric">Prix cible</th>
           <th class="numeric">Seuil</th>
         </tr>
       </thead>
       <tbody>
-        ${state.blends
-          .map((blend) => {
-            const composition = blend.components
-              .map((component) => {
-                const bean = getById("beans", component.beanId);
-                return `${component.percentage}% ${bean?.commercialName || "Grain"}`;
-              })
-              .join(" / ");
+        ${
+          state.blends.length
+            ? state.blends
+                .map((blend) => {
+                  const composition = blend.components
+                    .map((component) => {
+                      const bean = getById("beans", component.beanId);
+                      return `${component.percentage}% ${bean?.commercialName || "Grain"}`;
+                    })
+                    .join(" / ");
 
-            return `
-              <tr>
-                <td>${escapeHtml(blend.name)}</td>
-                <td>${escapeHtml(composition)}</td>
-                <td class="numeric">${escapeHtml(formatPct(blend.roastLossPct))}</td>
-                <td class="numeric">${escapeHtml(formatMoney(blend.maxCostPerKg))}</td>
-              </tr>
-            `;
-          })
-          .join("")}
+                  return `
+                    <tr>
+                      <td>${escapeHtml(blend.name)}</td>
+                      <td>${escapeHtml(composition)}</td>
+                      <td class="numeric">${escapeHtml(formatPct(blend.roastLossPct))}</td>
+                      <td class="numeric">${escapeHtml(formatMoney(blend.targetSalePricePerKg))}</td>
+                      <td class="numeric">${escapeHtml(formatMoney(blend.maxCostPerKg))}</td>
+                    </tr>
+                  `;
+                })
+                .join("")
+            : emptyTableRow(5)
+        }
       </tbody>
     </table>
   `;
+
+  els.stockRows.innerHTML = state.beans.length
+    ? state.beans
+        .map((bean) => {
+          const stock = state.greenStocks.find((item) => item.beanId === bean.id);
+          return `
+            <tr>
+              <td>${escapeHtml(bean.commercialName)}</td>
+              <td class="numeric">${escapeHtml(formatKg(Number(stock?.quantityKg || 0)))}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : emptyTableRow(2);
+
+  const historicalRows = [...(state.historicalOrders || [])]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 30);
+
+  els.historyRowsCount.textContent = `${state.historicalOrders.length} lignes`;
+  els.historyRows.innerHTML = historicalRows.length
+    ? historicalRows
+        .map((order) => {
+          const blend = getById("blends", order.blendId);
+          return `
+            <tr>
+              <td>${escapeHtml(order.date)}</td>
+              <td>${escapeHtml(blend?.name || "-")}</td>
+              <td class="numeric">${escapeHtml(formatKg(Number(order.roastedKg || 0)))}</td>
+              <td>${escapeHtml(order.channel || "-")}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : emptyTableRow(4);
 }
 
 function renderAll() {
@@ -1082,6 +1240,218 @@ function setupDefaults() {
   els.forecastSafety.value = forecastSettings.safetyStockPct;
   els.batchDate.value = today;
   els.batchQuantity.value = "20";
+  els.historyDate.value = previousYearDate(today);
+}
+
+async function addCountry(event) {
+  event.preventDefault();
+  const name = els.countryName.value.trim();
+  const region = els.countryRegion.value.trim();
+
+  if (!name) return;
+
+  const exists = state.countries.some((country) => country.name.toLowerCase() === name.toLowerCase());
+  if (exists) {
+    window.alert("Ce pays existe déjà.");
+    return;
+  }
+
+  state.countries.push({
+    id: createId("country", name),
+    name,
+    region
+  });
+
+  await saveState();
+  els.countryForm.reset();
+  renderAll();
+}
+
+async function addSupplier(event) {
+  event.preventDefault();
+  const name = els.supplierName.value.trim();
+
+  if (!name) return;
+
+  const exists = state.suppliers.some((supplier) => supplier.name.toLowerCase() === name.toLowerCase());
+  if (exists) {
+    window.alert("Ce fournisseur existe déjà.");
+    return;
+  }
+
+  state.suppliers.push({
+    id: createId("supplier", name),
+    name,
+    defaultCurrency: els.supplierCurrency.value
+  });
+
+  await saveState();
+  els.supplierForm.reset();
+  renderAll();
+}
+
+async function addBean(event) {
+  event.preventDefault();
+  const commercialName = els.beanName.value.trim();
+
+  if (!commercialName) return;
+
+  if (!els.beanCountry.value || !els.beanSupplier.value) {
+    window.alert("Ajoute au moins un pays et un fournisseur avant de créer un grain.");
+    return;
+  }
+
+  const exists = state.beans.some((bean) => bean.commercialName.toLowerCase() === commercialName.toLowerCase());
+  if (exists) {
+    window.alert("Ce grain existe déjà.");
+    return;
+  }
+
+  const bean = {
+    id: createId("bean", commercialName),
+    commercialName,
+    countryId: els.beanCountry.value,
+    defaultSupplierId: els.beanSupplier.value,
+    species: els.beanSpecies.value.trim() || "arabica",
+    process: els.beanProcess.value.trim()
+  };
+
+  state.beans.push(bean);
+  state.greenStocks.push({ beanId: bean.id, quantityKg: 0 });
+
+  await saveState();
+  els.beanForm.reset();
+  renderAll();
+}
+
+function collectBlendComponents() {
+  const components = [];
+
+  els.blendComponentBeans.forEach((select, index) => {
+    const percentageInput = els.blendComponentPercentages[index];
+    const hasBean = Boolean(select.value);
+    const hasPercentage = percentageInput.value !== "";
+
+    if (!hasBean && !hasPercentage) return;
+
+    const percentage = Number(percentageInput.value);
+    if (!hasBean || !Number.isFinite(percentage) || percentage <= 0) {
+      components.push({ error: true });
+      return;
+    }
+
+    components.push({
+      beanId: select.value,
+      percentage
+    });
+  });
+
+  return components;
+}
+
+async function addBlend(event) {
+  event.preventDefault();
+  const name = els.blendName.value.trim();
+  const components = collectBlendComponents();
+
+  if (!name) return;
+
+  if (components.some((component) => component.error)) {
+    window.alert("Chaque ligne de composition doit avoir un grain et un pourcentage supérieur à 0.");
+    return;
+  }
+
+  if (components.length === 0) {
+    window.alert("Ajoute au moins un grain dans la composition.");
+    return;
+  }
+
+  const uniqueBeanIds = new Set(components.map((component) => component.beanId));
+  if (uniqueBeanIds.size !== components.length) {
+    window.alert("Un même grain ne peut être saisi qu'une seule fois dans un assemblage.");
+    return;
+  }
+
+  const totalPct = components.reduce((sum, component) => sum + component.percentage, 0);
+  if (Math.abs(totalPct - 100) > 0.1) {
+    window.alert(`La composition doit totaliser 100 %. Total actuel : ${formatPct(totalPct)}`);
+    return;
+  }
+
+  state.blends.push({
+    id: createId("blend", name),
+    name,
+    roastLossPct: numberValue(els.blendLoss, 15),
+    packagingCostPerKg: numberValue(els.blendPackaging, 0),
+    energyCostPerKg: numberValue(els.blendEnergy, 0),
+    logisticsCostPerKg: numberValue(els.blendLogistics, 0),
+    targetSalePricePerKg: els.blendTargetPrice.value ? numberValue(els.blendTargetPrice, 0) : null,
+    maxCostPerKg: els.blendMaxCost.value ? numberValue(els.blendMaxCost, 0) : null,
+    components
+  });
+
+  await saveState();
+  els.blendForm.reset();
+  els.blendLoss.value = "15";
+  els.blendPackaging.value = "0.55";
+  els.blendEnergy.value = "0.22";
+  els.blendLogistics.value = "0.18";
+  renderAll();
+}
+
+async function updateStock(event) {
+  event.preventDefault();
+  const beanId = els.stockBean.value;
+  const quantityKg = numberValue(els.stockQuantity, NaN);
+
+  if (!beanId) {
+    window.alert("Ajoute un grain avant de saisir un stock.");
+    return;
+  }
+
+  if (!Number.isFinite(quantityKg) || quantityKg < 0) {
+    window.alert("Le stock doit être supérieur ou égal à 0.");
+    return;
+  }
+
+  const existing = state.greenStocks.find((stock) => stock.beanId === beanId);
+  if (existing) {
+    existing.quantityKg = quantityKg;
+  } else {
+    state.greenStocks.push({ beanId, quantityKg });
+  }
+
+  await saveState();
+  els.stockForm.reset();
+  renderAll();
+}
+
+async function addHistoricalOrder(event) {
+  event.preventDefault();
+  const roastedKg = numberValue(els.historyKg, NaN);
+
+  if (!els.historyBlend.value) {
+    window.alert("Ajoute un assemblage avant de saisir l'activité N-1.");
+    return;
+  }
+
+  if (!Number.isFinite(roastedKg) || roastedKg <= 0) {
+    window.alert("La quantité torréfiée doit être supérieure à 0.");
+    return;
+  }
+
+  state.historicalOrders.push({
+    id: createId("order", `${els.historyDate.value}-${els.historyBlend.value}`),
+    date: els.historyDate.value,
+    blendId: els.historyBlend.value,
+    roastedKg,
+    channel: els.historyChannel.value
+  });
+
+  await saveState();
+  els.historyForm.reset();
+  els.historyDate.value = previousYearDate(today);
+  renderAll();
 }
 
 async function addPrice(event) {
@@ -1097,6 +1467,11 @@ async function addPrice(event) {
     validTo: els.priceTo.value || null,
     notes: els.priceNotes.value.trim()
   };
+
+  if (!price.beanId || !price.supplierId) {
+    window.alert("Ajoute au moins un grain et un fournisseur avant de saisir un tarif.");
+    return;
+  }
 
   if (!price.pricePerKg || price.pricePerKg <= 0) {
     window.alert("Le prix doit être supérieur à 0.");
@@ -1196,14 +1571,26 @@ function exportData() {
 }
 
 async function resetDemo() {
-  const target = storageMode === "database" ? "la base partagée" : "les données de démonstration";
-  const ok = window.confirm(`Réinitialiser ${target} ?`);
+  const target = storageMode === "database" ? "la base partagée avec les données de démonstration" : "les données de démonstration";
+  const ok = window.confirm(`Recharger ${target} ? Les données actuelles seront remplacées.`);
   if (!ok) return;
   state = structuredClone(seedState);
   await saveState();
   setupDefaults();
   renderAll();
   renderCalculation(calculateBlend(els.calcBlend.value, els.calcDate.value), calculateBlend(els.calcBlend.value, els.compareDate.value));
+}
+
+async function clearData() {
+  const target = storageMode === "database" ? "la base partagée" : "les données locales";
+  const ok = window.confirm(`Démarrer avec une base vierge ? Cela remplace ${target}.`);
+  if (!ok) return;
+
+  state = buildEmptyState();
+  await saveState();
+  setupDefaults();
+  renderAll();
+  renderCalculation(calculateBlend(els.calcBlend.value, els.calcDate.value), null);
 }
 
 function setupNavigation() {
@@ -1216,11 +1603,18 @@ function setupNavigation() {
   });
 }
 
+els.countryForm.addEventListener("submit", addCountry);
+els.supplierForm.addEventListener("submit", addSupplier);
+els.beanForm.addEventListener("submit", addBean);
+els.blendForm.addEventListener("submit", addBlend);
+els.stockForm.addEventListener("submit", updateStock);
+els.historyForm.addEventListener("submit", addHistoricalOrder);
 els.priceForm.addEventListener("submit", addPrice);
 els.calculatorForm.addEventListener("submit", runCalculator);
 els.forecastForm.addEventListener("submit", runForecast);
 els.batchForm.addEventListener("submit", addBatch);
 els.exportData.addEventListener("click", exportData);
+els.clearData.addEventListener("click", clearData);
 els.resetDemo.addEventListener("click", resetDemo);
 
 async function initializeApp() {

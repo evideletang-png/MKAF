@@ -263,6 +263,10 @@ h3 {
   gap: 18px;
 }
 
+.full-span {
+  grid-column: 1 / -1;
+}
+
 .panel {
   min-width: 0;
   padding: 18px;
@@ -373,6 +377,29 @@ select:focus {
   grid-column: span 3;
 }
 
+.full-wide {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.component-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.component-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 10px;
+}
+
 .align-end {
   align-self: end;
 }
@@ -380,6 +407,10 @@ select:focus {
 .table-wrap {
   max-width: 100%;
   overflow-x: auto;
+}
+
+.spaced {
+  margin-top: 16px;
 }
 
 table {
@@ -451,6 +482,10 @@ th.numeric {
     grid-template-columns: 1fr;
   }
 
+  .full-span {
+    grid-column: auto;
+  }
+
   .topbar {
     display: grid;
   }
@@ -490,7 +525,12 @@ th.numeric {
   }
 
   .topbar-actions button,
+  .storage-status,
   .align-end {
     width: 100%;
+  }
+
+  .component-row {
+    grid-template-columns: 1fr;
   }
 }

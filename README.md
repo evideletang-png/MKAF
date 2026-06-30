@@ -5,6 +5,7 @@ Prototype interne Max Cafés pour suivre les tarifs datés des grains, calculer 
 ## Fonctionnalités de la V0
 
 - Catalogue de grains et fournisseurs de démonstration.
+- Création de pays producteurs, fournisseurs, grains, assemblages, stocks et lignes d'activité N-1 depuis l'interface.
 - Saisie de tarifs datés par grain et fournisseur.
 - Calcul du coût d'un assemblage à une date donnée.
 - Comparaison du coût entre deux dates.
@@ -76,4 +77,4 @@ La prochaine version devra ajouter :
 - une authentification ;
 - des imports/exports CSV ;
 - un schéma relationnel complet si l'outil sort du périmètre prototype ;
-- une gestion fine des grains, pays, fournisseurs et stocks depuis l'interface.
+- des écrans d'édition/suppression plus complets pour corriger les référentiels après saisie.
