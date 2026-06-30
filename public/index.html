@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Outil cout cafe</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navigation principale">
+        <div class="brand">
+          <span class="brand-mark">CC</span>
+          <div>
+            <strong>Cout cafe</strong>
+            <span>Prototype torrefacteur</span>
+          </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="Sections">
+          <button class="nav-tab active" data-view="dashboard" type="button">Tableau de bord</button>
+          <button class="nav-tab" data-view="prices" type="button">Tarifs dates</button>
+          <button class="nav-tab" data-view="calculator" type="button">Calculateur</button>
+          <button class="nav-tab" data-view="production" type="button">Production</button>
+          <button class="nav-tab" data-view="data" type="button">Donnees</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">MVP interne</p>
+            <h1>Calcul de cout par origine, tarif et assemblage</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="secondary" id="resetDemo" type="button">Reinitialiser demo</button>
+            <button class="primary" id="exportData" type="button">Exporter JSON</button>
+          </div>
+        </header>
+
+        <section class="view active" id="dashboard">
+          <div class="metric-grid" id="metrics"></div>
+          <div class="section-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Alertes actives</h2>
+                <span id="alertCount" class="pill">0</span>
+              </div>
+              <div id="alertsList" class="stack"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Assemblages suivis</h2>
+              </div>
+              <div id="blendCards" class="stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="prices">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Ajouter un tarif negocie</h2>
+            </div>
+            <form class="form-grid" id="priceForm">
+              <label>
+                Grain
+                <select id="priceBean" required></select>
+              </label>
+              <label>
+                Fournisseur
+                <select id="priceSupplier" required></select>
+              </label>
+              <label>
+                Prix / kg
+                <input id="priceValue" inputmode="decimal" min="0.01" step="0.01" type="number" required />
+              </label>
+              <label>
+                Devise
+                <select id="priceCurrency" required>
+                  <option>EUR</option>
+                  <option>USD</option>
+                </select>
+              </label>
+              <label>
+                Valable du
+                <input id="priceFrom" type="date" required />
+              </label>
+              <label>
+                Valable au
+                <input id="priceTo" type="date" />
+              </label>
+              <label class="wide">
+                Commentaire
+                <input id="priceNotes" type="text" placeholder="Contrat, nego, estimation..." />
+              </label>
+              <button class="primary align-end" type="submit">Ajouter le tarif</button>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Historique des tarifs</h2>
+              <span class="muted" id="priceRowsCount"></span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Grain</th>
+                    <th>Fournisseur</th>
+                    <th>Prix</th>
+                    <th>Debut</th>
+                    <th>Fin</th>
+                    <th>Note</th>
+                  </tr>
+                </thead>
+                <tbody id="priceRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="calculator">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Calculateur de cout</h2>
+            </div>
+            <form class="form-grid compact" id="calculatorForm">
+              <label>
+                Assemblage
+                <select id="calcBlend"></select>
+              </label>
+              <label>
+                Date de calcul
+                <input id="calcDate" type="date" required />
+              </label>
+              <label>
+                Comparer avec
+                <input id="compareDate" type="date" />
+              </label>
+              <button class="primary align-end" type="submit">Calculer</button>
+            </form>
+          </section>
+
+          <div class="section-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Resultat</h2>
+              </div>
+              <div id="calcResult" class="stack"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Detail des grains</h2>
+              </div>
+              <div id="calcLines" class="table-wrap"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="production">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Nouveau batch</h2>
+            </div>
+            <form class="form-grid compact" id="batchForm">
+              <label>
+                Assemblage
+                <select id="batchBlend"></select>
+              </label>
+              <label>
+                Date
+                <input id="batchDate" type="date" required />
+              </label>
+              <label>
+                Quantite torrefiee kg
+                <input id="batchQuantity" inputmode="decimal" min="0.1" step="0.1" type="number" required />
+              </label>
+              <label>
+                Perte reelle %
+                <input id="batchLoss" inputmode="decimal" min="0" max="50" step="0.1" type="number" />
+              </label>
+              <button class="primary align-end" type="submit">Figer le cout</button>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Historique production</h2>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Assemblage</th>
+                    <th>Kg torrefies</th>
+                    <th>Cout fige / kg</th>
+                    <th>Cout batch</th>
+                  </tr>
+                </thead>
+                <tbody id="batchRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="data">
+          <div class="section-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Grains</h2>
+              </div>
+              <div id="beanRows" class="table-wrap"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Assemblages</h2>
+              </div>
+              <div id="blendRows" class="table-wrap"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="emptyStateTemplate">
+      <div class="empty-state">
+        <strong>Aucune donnee</strong>
+        <span>Ajoute un tarif ou lance un calcul pour alimenter cette zone.</span>
+      </div>
+    </template>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
