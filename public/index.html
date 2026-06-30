@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Max Cafes - Outil cout cafe</title>
+    <title>Max Cafés - Outil coût café</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -11,11 +11,11 @@
       <aside class="sidebar" aria-label="Navigation principale">
         <div class="brand">
           <span class="brand-logo-wrap">
-            <img class="brand-logo" src="/assets/max-cafes-logo-cropped.png" alt="Max Cafes" />
+            <img class="brand-logo" src="/assets/max-cafes-logo-cropped.png" alt="Max Cafés" />
           </span>
           <div>
-            <strong>Max Cafes</strong>
-            <span>Prototype torrefacteur</span>
+            <strong>Max Cafés</strong>
+            <span>Prototype torréfacteur</span>
           </div>
         </div>
 
@@ -23,20 +23,20 @@
           <button class="nav-tab active" data-view="dashboard" type="button">Tableau de bord</button>
           <button class="nav-tab" data-view="prices" type="button">Tarifs dates</button>
           <button class="nav-tab" data-view="calculator" type="button">Calculateur</button>
-          <button class="nav-tab" data-view="forecast" type="button">Previsions</button>
+          <button class="nav-tab" data-view="forecast" type="button">Prévisions</button>
           <button class="nav-tab" data-view="production" type="button">Production</button>
-          <button class="nav-tab" data-view="data" type="button">Donnees</button>
+          <button class="nav-tab" data-view="data" type="button">Données</button>
         </nav>
       </aside>
 
       <main class="main">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Max Cafes - outil interne</p>
-            <h1>Pilotage des couts, previsions et commandes cafe</h1>
+            <p class="eyebrow">Max Cafés - outil interne</p>
+            <h1>Pilotage des coûts, prévisions et commandes café</h1>
           </div>
           <div class="topbar-actions">
-            <button class="secondary" id="resetDemo" type="button">Reinitialiser demo</button>
+            <button class="secondary" id="resetDemo" type="button">Réinitialiser la démo</button>
             <button class="primary" id="exportData" type="button">Exporter JSON</button>
           </div>
         </header>
@@ -63,7 +63,7 @@
         <section class="view" id="prices">
           <section class="panel">
             <div class="panel-heading">
-              <h2>Ajouter un tarif negocie</h2>
+              <h2>Ajouter un tarif négocié</h2>
             </div>
             <form class="form-grid" id="priceForm">
               <label>
@@ -95,7 +95,7 @@
               </label>
               <label class="wide">
                 Commentaire
-                <input id="priceNotes" type="text" placeholder="Contrat, nego, estimation..." />
+                <input id="priceNotes" type="text" placeholder="Contrat, négociation, estimation..." />
               </label>
               <button class="primary align-end" type="submit">Ajouter le tarif</button>
             </form>
@@ -113,7 +113,7 @@
                     <th>Grain</th>
                     <th>Fournisseur</th>
                     <th>Prix</th>
-                    <th>Debut</th>
+                    <th>Début</th>
                     <th>Fin</th>
                     <th>Note</th>
                   </tr>
@@ -127,7 +127,7 @@
         <section class="view" id="calculator">
           <section class="panel">
             <div class="panel-heading">
-              <h2>Calculateur de cout</h2>
+              <h2>Calculateur de coût</h2>
             </div>
             <form class="form-grid compact" id="calculatorForm">
               <label>
@@ -149,13 +149,13 @@
           <div class="section-grid">
             <section class="panel">
               <div class="panel-heading">
-                <h2>Resultat</h2>
+                <h2>Résultat</h2>
               </div>
               <div id="calcResult" class="stack"></div>
             </section>
             <section class="panel">
               <div class="panel-heading">
-                <h2>Detail des grains</h2>
+                <h2>Détail des grains</h2>
               </div>
               <div id="calcLines" class="table-wrap"></div>
             </section>
@@ -169,7 +169,7 @@
             </div>
             <form class="form-grid forecast-form" id="forecastForm">
               <label>
-                Debut
+                Début
                 <input id="forecastStart" type="date" required />
               </label>
               <label>
@@ -185,7 +185,7 @@
                 <input id="forecastSeason" inputmode="decimal" step="0.1" type="number" />
               </label>
               <label>
-                Evenements / meteo %
+                Événements / météo %
                 <input id="forecastExternal" inputmode="decimal" step="0.1" type="number" />
               </label>
               <label>
@@ -193,10 +193,10 @@
                 <input id="forecastKnownOrders" inputmode="decimal" step="0.1" type="number" />
               </label>
               <label>
-                Stock securite %
+                Stock de sécurité %
                 <input id="forecastSafety" inputmode="decimal" min="0" step="0.1" type="number" />
               </label>
-              <button class="primary align-end" type="submit">Calculer la prevision</button>
+              <button class="primary align-end" type="submit">Calculer la prévision</button>
             </form>
           </section>
 
@@ -205,13 +205,13 @@
           <div class="section-grid">
             <section class="panel">
               <div class="panel-heading">
-                <h2>Commande conseillee cafe vert</h2>
+                <h2>Commande conseillée café vert</h2>
               </div>
               <div id="forecastBeanNeeds" class="table-wrap"></div>
             </section>
             <section class="panel">
               <div class="panel-heading">
-                <h2>Demande prevue par assemblage</h2>
+                <h2>Demande prévue par assemblage</h2>
               </div>
               <div id="forecastBlendNeeds" class="table-wrap"></div>
             </section>
@@ -219,7 +219,7 @@
 
           <section class="panel">
             <div class="panel-heading">
-              <h2>Prevision jour par jour</h2>
+              <h2>Prévision jour par jour</h2>
             </div>
             <div id="forecastDailyRows" class="table-wrap"></div>
           </section>
@@ -240,14 +240,14 @@
                 <input id="batchDate" type="date" required />
               </label>
               <label>
-                Quantite torrefiee kg
+                Quantité torréfiée kg
                 <input id="batchQuantity" inputmode="decimal" min="0.1" step="0.1" type="number" required />
               </label>
               <label>
-                Perte reelle %
+                Perte réelle %
                 <input id="batchLoss" inputmode="decimal" min="0" max="50" step="0.1" type="number" />
               </label>
-              <button class="primary align-end" type="submit">Figer le cout</button>
+              <button class="primary align-end" type="submit">Figer le coût</button>
             </form>
           </section>
 
@@ -261,9 +261,9 @@
                   <tr>
                     <th>Date</th>
                     <th>Assemblage</th>
-                    <th>Kg torrefies</th>
-                    <th>Cout fige / kg</th>
-                    <th>Cout batch</th>
+                    <th>Kg torréfiés</th>
+                    <th>Coût figé / kg</th>
+                    <th>Coût batch</th>
                   </tr>
                 </thead>
                 <tbody id="batchRows"></tbody>
@@ -293,7 +293,7 @@
 
     <template id="emptyStateTemplate">
       <div class="empty-state">
-        <strong>Aucune donnee</strong>
+        <strong>Aucune donnée</strong>
         <span>Ajoute un tarif ou lance un calcul pour alimenter cette zone.</span>
       </div>
     </template>

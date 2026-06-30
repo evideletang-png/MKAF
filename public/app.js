@@ -54,9 +54,9 @@ function buildHistoricalOrders() {
 
 const seedState = {
   countries: [
-    { id: "country-br", name: "Bresil", region: "Amerique latine" },
-    { id: "country-co", name: "Colombie", region: "Amerique latine" },
-    { id: "country-et", name: "Ethiopie", region: "Afrique" }
+    { id: "country-br", name: "Brésil", region: "Amérique latine" },
+    { id: "country-co", name: "Colombie", region: "Amérique latine" },
+    { id: "country-et", name: "Éthiopie", region: "Afrique" }
   ],
   suppliers: [
     { id: "supplier-a", name: "Importateur A", defaultCurrency: "EUR" },
@@ -65,7 +65,7 @@ const seedState = {
   beans: [
     {
       id: "bean-bresil-santos",
-      commercialName: "Bresil Santos",
+      commercialName: "Brésil Santos",
       countryId: "country-br",
       defaultSupplierId: "supplier-a",
       species: "arabica",
@@ -77,15 +77,15 @@ const seedState = {
       countryId: "country-co",
       defaultSupplierId: "supplier-b",
       species: "arabica",
-      process: "lave"
+      process: "lavé"
     },
     {
       id: "bean-ethiopie-sidamo",
-      commercialName: "Ethiopie Sidamo",
+      commercialName: "Éthiopie Sidamo",
       countryId: "country-et",
       defaultSupplierId: "supplier-b",
       species: "arabica",
-      process: "lave"
+      process: "lavé"
     }
   ],
   prices: [
@@ -117,7 +117,7 @@ const seedState = {
       currency: "EUR",
       validFrom: "2026-02-01",
       validTo: "2026-03-31",
-      notes: "Renego fevrier"
+      notes: "Renégociation février"
     },
     {
       id: "price-4",
@@ -524,7 +524,7 @@ function calculateAlerts(date = today) {
       alerts.push({
         severity: "warning",
         title: blend.name,
-        message: `Cout ${formatMoney(result.totalCostPerKg)} au-dessus du seuil ${formatMoney(blend.maxCostPerKg)}`
+        message: `Coût ${formatMoney(result.totalCostPerKg)} au-dessus du seuil ${formatMoney(blend.maxCostPerKg)}`
       });
     }
 
@@ -532,7 +532,7 @@ function calculateAlerts(date = today) {
       alerts.push({
         severity: "warning",
         title: blend.name,
-        message: `Marge estimee basse : ${formatPct(result.marginPct)}`
+        message: `Marge estimée basse : ${formatPct(result.marginPct)}`
       });
     }
   });
@@ -544,7 +544,7 @@ function calculateAlerts(date = today) {
       const bean = getById("beans", price.beanId);
       alerts.push({
         severity: "warning",
-        title: "Tarif bientot expire",
+        title: "Tarif bientôt à expiration",
         message: `${bean?.commercialName || "Grain"} expire le ${price.validTo}`
       });
     }
@@ -580,10 +580,10 @@ function renderMetrics() {
   const forecast = calculateForecast();
 
   els.metrics.innerHTML = [
-    ["Grains suivis", state.beans.length, "References cafe vert"],
+    ["Grains suivis", state.beans.length, "Références café vert"],
     ["Tarifs saisis", state.prices.length, `${validPrices.length} actifs aujourd'hui`],
-    ["Assemblages", state.blends.length, "Recettes surveillees"],
-    ["Prevision 14j", formatKg(forecast.totalForecastRoastedKg), `${formatKg(forecast.totalOrderKg)} a commander`]
+    ["Assemblages", state.blends.length, "Recettes surveillées"],
+    ["Prévision 14 j", formatKg(forecast.totalForecastRoastedKg), `${formatKg(forecast.totalOrderKg)} à commander`]
   ]
     .map(
       ([label, value, helper]) => `
@@ -606,7 +606,7 @@ function renderAlerts() {
     els.alertsList.innerHTML = `
       <div class="result-card">
         <strong>Aucune alerte</strong>
-        <span>Les tarifs et seuils sont coherents pour la date du jour.</span>
+        <span>Les tarifs et les seuils sont cohérents pour la date du jour.</span>
       </div>
     `;
     return;
@@ -699,23 +699,23 @@ function renderCalculation(result, compareResult) {
     </div>
     <div class="result-card">
       <strong>${formatMoney(result.greenCostPerKg)}</strong>
-      <span>Cout matiere cafe vert / kg</span>
+      <span>Coût matière café vert / kg</span>
     </div>
     <div class="result-card">
       <strong>${formatMoney(result.roastedCostPerKg)}</strong>
-      <span>Cout apres perte de torrefaction (${formatPct(result.lossPct)})</span>
+      <span>Coût après perte de torréfaction (${formatPct(result.lossPct)})</span>
     </div>
     <div class="result-card">
       <strong>${formatMoney(result.totalCostPerKg)}</strong>
-      <span>Cout total avec frais (${formatMoney(result.fees)})</span>
+      <span>Coût total avec frais (${formatMoney(result.fees)})</span>
     </div>
     <div class="result-card">
       <strong>${formatMoney(result.margin)} / ${formatPct(result.marginPct)}</strong>
-      <span>Marge estimee sur prix cible</span>
+      <span>Marge estimée sur prix cible</span>
     </div>
     <div class="result-card">
       <strong>${deltaLabel}</strong>
-      <span>Variation vs date comparee</span>
+      <span>Variation vs date comparée</span>
     </div>
   `;
 
@@ -724,9 +724,9 @@ function renderCalculation(result, compareResult) {
 
 function renderForecast(result = calculateForecast()) {
   els.forecastMetrics.innerHTML = [
-    ["Demande prevue", formatKg(result.totalForecastRoastedKg), "Cafe torrefie sur l'horizon"],
-    ["Besoin cafe vert", formatKg(result.totalGreenRequiredKg), "Avant stock de securite"],
-    ["A commander", formatKg(result.totalOrderKg), "Apres stock disponible"],
+    ["Demande prévue", formatKg(result.totalForecastRoastedKg), "Café torréfié sur l'horizon"],
+    ["Besoin café vert", formatKg(result.totalGreenRequiredKg), "Avant stock de sécurité"],
+    ["À commander", formatKg(result.totalOrderKg), "Après stock disponible"],
     ["Facteur global", formatPct((result.multiplier - 1) * 100), "Croissance, saison, contexte"]
   ]
     .map(
@@ -754,9 +754,9 @@ function renderBeanNeedsTable(rows) {
         <tr>
           <th>Grain</th>
           <th class="numeric">Besoin brut</th>
-          <th class="numeric">Avec securite</th>
+          <th class="numeric">Avec sécurité</th>
           <th class="numeric">Stock</th>
-          <th class="numeric">A commander</th>
+          <th class="numeric">À commander</th>
         </tr>
       </thead>
       <tbody>
@@ -787,7 +787,7 @@ function renderBlendNeedsTable(rows) {
         <tr>
           <th>Assemblage</th>
           <th class="numeric">N-1</th>
-          <th class="numeric">Prevu torrefie</th>
+          <th class="numeric">Prévu torréfié</th>
           <th class="numeric">Besoin vert</th>
         </tr>
       </thead>
@@ -817,9 +817,9 @@ function renderDailyForecastTable(rows, multiplier) {
       <thead>
         <tr>
           <th>Date</th>
-          <th>Reference N-1</th>
-          <th class="numeric">Activite N-1</th>
-          <th class="numeric">Prevision</th>
+          <th>Référence N-1</th>
+          <th class="numeric">Activité N-1</th>
+          <th class="numeric">Prévision</th>
           <th class="numeric">Facteur</th>
           <th>Confiance</th>
         </tr>
@@ -882,7 +882,7 @@ function renderBatches() {
   if (state.batches.length === 0) {
     els.batchRows.innerHTML = `
       <tr>
-        <td colspan="5">Aucun batch fige pour le moment.</td>
+        <td colspan="5">Aucun batch figé pour le moment.</td>
       </tr>
     `;
     return;
@@ -1015,12 +1015,12 @@ function addPrice(event) {
   };
 
   if (!price.pricePerKg || price.pricePerKg <= 0) {
-    window.alert("Le prix doit etre superieur a 0.");
+    window.alert("Le prix doit être supérieur à 0.");
     return;
   }
 
   if (price.validTo && price.validTo < price.validFrom) {
-    window.alert("La date de fin doit etre apres la date de debut.");
+    window.alert("La date de fin doit être après la date de début.");
     return;
   }
 
@@ -1069,7 +1069,7 @@ function addBatch(event) {
   }
 
   if (!quantity || quantity <= 0) {
-    window.alert("La quantite doit etre superieure a 0.");
+    window.alert("La quantité doit être supérieure à 0.");
     return;
   }
 
@@ -1112,7 +1112,7 @@ function exportData() {
 }
 
 function resetDemo() {
-  const ok = window.confirm("Reinitialiser les donnees de demonstration ?");
+  const ok = window.confirm("Réinitialiser les données de démonstration ?");
   if (!ok) return;
   state = structuredClone(seedState);
   saveState();

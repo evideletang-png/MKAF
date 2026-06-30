@@ -1,90 +1,90 @@
-# Cahier des charges MVP - Outil de cout cafe pour torrefacteur
+# Cahier des charges MVP - Outil de coût café pour torréfacteur
 
 Version: 0.1  
 Date: 30 juin 2026  
-Usage: outil interne pour un torrefacteur
+Usage: outil interne pour un torréfacteur
 
 ## 1. Contexte
 
-Le torrefacteur dispose deja d'un logiciel de gestion, mais celui-ci ne permet pas de suivre finement le cout reel des cafes en fonction :
+Le torréfacteur dispose déjà d'un logiciel de gestion, mais celui-ci ne permet pas de suivre finement le coût réel des cafés en fonction :
 
 - de l'origine du grain ;
 - du fournisseur ;
-- du prix negocie sur une periode donnee ;
+- du prix négocié sur une période donnée ;
 - de la composition des assemblages ;
 - de l'evolution des tarifs dans le temps.
 
-L'information tarifaire n'est pas publique. Elle doit donc etre saisie manuellement par le torrefacteur, au jour le jour, au mois, au trimestre ou selon les conditions negociees avec ses fournisseurs.
+L'information tarifaire n'est pas publique. Elle doit donc être saisie manuellement par le torréfacteur, au jour le jour, au mois, au trimestre ou selon les conditions négociées avec ses fournisseurs.
 
-Le nouvel outil n'a pas vocation a remplacer le logiciel de gestion existant. Il doit agir comme une surcouche metier dediee au calcul de cout, a la simulation et aux alertes.
+Le nouvel outil n'a pas vocation à remplacer le logiciel de gestion existant. Il doit agir comme une surcouche métier dédiée au calcul de coût, à la simulation et aux alertes.
 
 ## 2. Objectif du MVP
 
-Le MVP doit permettre au torrefacteur de repondre rapidement a quatre questions :
+Le MVP doit permettre au torréfacteur de répondre rapidement à quatre questions :
 
-1. Quel est le cout actuel d'un grain donne ?
-2. Quel est le cout actuel d'un assemblage compose de plusieurs grains ?
-3. Comment ce cout evolue-t-il entre deux dates ou deux periodes ?
-4. A partir de quel moment un prix, un cout ou une marge devient-il problematique ?
+1. Quel est le coût actuel d'un grain donné ?
+2. Quel est le coût actuel d'un assemblage composé de plusieurs grains ?
+3. Comment ce coût évolue-t-il entre deux dates ou deux périodes ?
+4. À partir de quel moment un prix, un coût ou une marge devient-il problématique ?
 
 ## 3. Principes directeurs
 
-- L'outil doit etre simple a maintenir au quotidien.
-- La saisie des prix doit etre rapide.
-- Chaque prix doit etre date et historise.
-- Le cout d'un batch de production doit etre fige au moment de la production.
-- Les calculs doivent etre transparents et exportables.
-- L'utilisateur doit pouvoir travailler meme sans connexion a une API de marche.
+- L'outil doit être simple à maintenir au quotidien.
+- La saisie des prix doit être rapide.
+- Chaque prix doit être daté et historisé.
+- Le coût d'un batch de production doit être figé au moment de la production.
+- Les calculs doivent être transparents et exportables.
+- L'utilisateur doit pouvoir travailler même sans connexion à une API de marché.
 
-## 4. Perimetre du MVP
+## 4. Périmètre du MVP
 
 ### Inclus en version 1
 
 - Catalogue des grains.
 - Gestion des pays d'origine.
 - Gestion des fournisseurs.
-- Saisie des tarifs negocies par periode.
-- Creation d'assemblages.
-- Calcul du cout d'un assemblage a une date donnee.
-- Comparaison de cout entre deux dates.
-- Prise en compte d'une perte de torrefaction.
+- Saisie des tarifs négociés par période.
+- Création d'assemblages.
+- Calcul du coût d'un assemblage à une date donnée.
+- Comparaison de coût entre deux dates.
+- Prise en compte d'une perte de torréfaction.
 - Prise en compte optionnelle de frais fixes ou variables.
-- Creation de batchs de production avec cout historique fige.
-- Alertes simples sur prix, cout d'assemblage et marge.
+- Création de batchs de production avec coût historique figé.
+- Alertes simples sur prix, coût d'assemblage et marge.
 - Import et export Excel ou CSV.
 
 ### Exclu en version 1
 
 - Facturation.
 - CRM.
-- Comptabilite.
-- Gestion commerciale complete.
-- Connexion automatique aux marches a terme.
+- Comptabilité.
+- Gestion commerciale complète.
+- Connexion automatique aux marchés à terme.
 - Gestion multi-sites.
 - Application mobile native.
 - Synchronisation complexe avec le logiciel existant.
 
 ## 5. Utilisateur cible
 
-Utilisateur principal : le torrefacteur ou la personne responsable des achats et de la production.
+Utilisateur principal : le torréfacteur ou la personne responsable des achats et de la production.
 
 Besoins principaux :
 
-- saisir ou mettre a jour les prix negocies ;
-- consulter les couts des assemblages ;
+- saisir ou mettre à jour les prix négociés ;
+- consulter les coûts des assemblages ;
 - simuler l'impact d'une hausse de prix ;
-- preparer une production ;
+- préparer une production ;
 - savoir si un produit reste rentable ;
-- exporter les calculs pour verification ou partage.
+- exporter les calculs pour vérification ou partage.
 
-## 6. Objets metier
+## 6. Objets métier
 
 ### Pays
 
 Champs principaux :
 
 - nom du pays ;
-- zone geographique optionnelle ;
+- zone géographique optionnelle ;
 - actif / inactif.
 
 ### Fournisseur
@@ -93,7 +93,7 @@ Champs principaux :
 
 - nom ;
 - contact optionnel ;
-- devise par defaut ;
+- devise par défaut ;
 - notes.
 
 ### Grain
@@ -104,15 +104,15 @@ Champs principaux :
 - pays d'origine ;
 - fournisseur principal ;
 - type : arabica, robusta ou autre ;
-- variete optionnelle ;
+- variété optionnelle ;
 - process optionnel : lave, naturel, honey, autre ;
-- unite de prix : kg par defaut ;
+- unité de prix : kg par défaut ;
 - actif / inactif ;
 - notes.
 
 ### Tarif grain
 
-Le tarif grain est l'objet central du systeme.
+Le tarif grain est l'objet central du système.
 
 Champs principaux :
 
@@ -120,18 +120,18 @@ Champs principaux :
 - fournisseur ;
 - prix par kg ;
 - devise ;
-- date de debut de validite ;
-- date de fin de validite optionnelle ;
+- date de début de validité ;
+- date de fin de validité optionnelle ;
 - type de tarif : contrat, spot, estimation, marche, autre ;
 - commentaire ;
 - date de saisie ;
 - utilisateur ayant saisi le tarif.
 
-Regles :
+Règles :
 
 - un grain peut avoir plusieurs tarifs dans le temps ;
-- deux tarifs du meme grain et du meme fournisseur ne devraient pas se chevaucher sur la meme periode ;
-- si plusieurs tarifs sont possibles a une date donnee, l'outil doit le signaler a l'utilisateur.
+- deux tarifs du même grain et du même fournisseur ne devraient pas se chevaucher sur la même période ;
+- si plusieurs tarifs sont possibles à une date donnée, l'outil doit le signaler à l'utilisateur.
 
 ### Assemblage
 
@@ -139,12 +139,12 @@ Champs principaux :
 
 - nom ;
 - description ;
-- perte de torrefaction estimee en pourcentage ;
+- perte de torréfaction estimée en pourcentage ;
 - frais d'emballage par kg optionnels ;
-- frais d'energie par kg optionnels ;
+- frais d'énergie par kg optionnels ;
 - frais logistiques par kg optionnels ;
 - prix de vente cible optionnel ;
-- seuil de cout maximum optionnel ;
+- seuil de coût maximum optionnel ;
 - actif / inactif.
 
 ### Composition d'assemblage
@@ -157,11 +157,11 @@ Champs principaux :
 - fournisseur impose optionnel ;
 - commentaire.
 
-Regles :
+Règles :
 
-- la somme des pourcentages doit etre egale a 100 % ;
+- la somme des pourcentages doit être égale à 100 % ;
 - un assemblage doit contenir au moins un grain ;
-- le calcul doit indiquer clairement si un prix manque pour un grain a la date choisie.
+- le calcul doit indiquer clairement si un prix manque pour un grain à la date choisie.
 
 ### Batch de production
 
@@ -169,41 +169,41 @@ Champs principaux :
 
 - date de production ;
 - assemblage ;
-- quantite produite ;
-- quantite de cafe vert consommee ;
-- perte reelle en pourcentage ;
-- cout matiere calcule au moment de la production ;
-- cout total calcule au moment de la production ;
+- quantité produite ;
+- quantité de café vert consommée ;
+- perte réelle en pourcentage ;
+- coût matière calculé au moment de la production ;
+- coût total calculé au moment de la production ;
 - notes.
 
-Regles :
+Règles :
 
-- le cout d'un batch est fige a la creation ;
-- une modification ulterieure des tarifs ne modifie pas les batchs historiques ;
-- si necessaire, l'utilisateur peut recalculer un batch manuellement avec une action explicite.
+- le coût d'un batch est figé à la création ;
+- une modification ultérieure des tarifs ne modifie pas les batchs historiques ;
+- si nécessaire, l'utilisateur peut recalculer un batch manuellement avec une action explicite.
 
 ### Alerte
 
 Types d'alertes MVP :
 
-- prix d'un grain superieur a un seuil ;
-- cout d'un assemblage superieur a un seuil ;
-- marge inferieure a un seuil ;
-- tarif arrivant bientot a expiration ;
-- prix manquant pour une periode.
+- prix d'un grain supérieur à un seuil ;
+- coût d'un assemblage supérieur à un seuil ;
+- marge inférieure à un seuil ;
+- tarif arrivant bientôt à expiration ;
+- prix manquant pour une période.
 
-## 7. Regles de calcul
+## 7. Règles de calcul
 
-### Cout d'un grain a une date donnee
+### Coût d'un grain à une date donnée
 
 Pour un grain et une date, l'outil cherche le tarif dont :
 
-- date de debut <= date choisie ;
+- date de début <= date choisie ;
 - date de fin vide ou date de fin >= date choisie.
 
-Si aucun tarif n'est trouve, le cout est marque comme indisponible.
+Si aucun tarif n'est trouvé, le coût est marqué comme indisponible.
 
-### Cout matiere d'un assemblage
+### Coût matière d'un assemblage
 
 Pour chaque grain de l'assemblage :
 
@@ -219,19 +219,19 @@ cout_matiere_kg_vert = somme_des_couts_lignes
 
 Exemple :
 
-- Bresil : 50 % a 5,80 EUR/kg = 2,90 EUR
+- Brésil : 50 % a 5,80 EUR/kg = 2,90 EUR
 - Colombie : 30 % a 7,20 EUR/kg = 2,16 EUR
-- Ethiopie : 20 % a 8,10 EUR/kg = 1,62 EUR
+- Éthiopie : 20 % a 8,10 EUR/kg = 1,62 EUR
 
-Cout matiere cafe vert :
+Coût matière café vert :
 
 ```
 2,90 + 2,16 + 1,62 = 6,68 EUR/kg vert
 ```
 
-### Cout apres perte de torrefaction
+### Coût après perte de torréfaction
 
-Si la perte de torrefaction estimee est de 15 % :
+Si la perte de torréfaction estimée est de 15 % :
 
 ```
 cout_matiere_kg_torrefie = cout_matiere_kg_vert / (1 - perte)
@@ -243,7 +243,7 @@ Exemple :
 6,68 / (1 - 0,15) = 7,86 EUR/kg torrefie
 ```
 
-### Cout total
+### Coût total
 
 ```
 cout_total = cout_matiere_kg_torrefie + frais_emballage + frais_energie + frais_logistiques
@@ -251,25 +251,25 @@ cout_total = cout_matiere_kg_torrefie + frais_emballage + frais_energie + frais_
 
 ### Marge
 
-Si un prix de vente cible est renseigne :
+Si un prix de vente cible est renseigné :
 
 ```
 marge_euros = prix_vente - cout_total
 marge_pourcentage = marge_euros / prix_vente
 ```
 
-## 8. Ecrans MVP
+## 8. Écrans MVP
 
 ### Tableau de bord
 
-Objectif : donner une vision immediate des points d'attention.
+Objectif : donner une vision immédiate des points d'attention.
 
 Contenu :
 
-- cout actuel des principaux assemblages ;
-- variation depuis la periode precedente ;
+- coût actuel des principaux assemblages ;
+- variation depuis la période précédente ;
 - alertes actives ;
-- tarifs bientot expires ;
+- tarifs bientôt expirés ;
 - grains sans tarif valide ;
 - derniers batchs de production.
 
@@ -277,42 +277,42 @@ Contenu :
 
 Actions :
 
-- creer un grain ;
+- créer un grain ;
 - modifier un grain ;
-- desactiver un grain ;
+- désactiver un grain ;
 - consulter l'historique des tarifs du grain ;
 - filtrer par pays, fournisseur ou type.
 
-### Tarifs negocies
+### Tarifs négociés
 
 Actions :
 
 - ajouter un tarif ;
 - importer une grille de prix ;
-- modifier une periode de validite ;
-- voir les tarifs actifs a une date donnee ;
-- detecter les chevauchements de periode ;
+- modifier une période de validité ;
+- voir les tarifs actifs à une date donnée ;
+- détecter les chevauchements de période ;
 - exporter l'historique.
 
 ### Assemblages
 
 Actions :
 
-- creer un assemblage ;
+- créer un assemblage ;
 - choisir les grains ;
-- definir les pourcentages ;
-- renseigner la perte de torrefaction estimee ;
+- définir les pourcentages ;
+- renseigner la perte de torréfaction estimée ;
 - renseigner les frais ;
-- visualiser le cout actuel ;
-- tester le cout a une autre date.
+- visualiser le coût actuel ;
+- tester le coût à une autre date.
 
-### Calculateur de cout
+### Calculateur de coût
 
 Actions :
 
 - choisir un assemblage ;
 - choisir une date ;
-- voir le detail ligne par ligne ;
+- voir le détail ligne par ligne ;
 - comparer avec une autre date ;
 - afficher la variation en euros et en pourcentage ;
 - exporter le calcul.
@@ -321,22 +321,22 @@ Actions :
 
 Actions :
 
-- creer un batch ;
+- créer un batch ;
 - choisir l'assemblage ;
-- saisir la quantite produite ;
-- saisir la perte reelle ;
-- calculer et figer le cout ;
+- saisir la quantité produite ;
+- saisir la perte réelle ;
+- calculer et figer le coût ;
 - consulter l'historique des batchs.
 
 ### Alertes
 
 Actions :
 
-- definir un seuil sur un grain ;
-- definir un seuil sur un assemblage ;
-- definir un seuil de marge ;
+- définir un seuil sur un grain ;
+- définir un seuil sur un assemblage ;
+- définir un seuil de marge ;
 - consulter les alertes actives ;
-- marquer une alerte comme traitee.
+- marquer une alerte comme traitée.
 
 ## 9. Imports et exports
 
@@ -348,123 +348,122 @@ Format CSV ou Excel attendu :
 - fournisseur ;
 - prix par kg ;
 - devise ;
-- date de debut ;
+- date de début ;
 - date de fin ;
 - commentaire optionnel.
 
-L'import doit verifier :
+L'import doit vérifier :
 
 - que le grain existe ;
 - que le fournisseur existe ;
-- que le prix est numerique ;
+- que le prix est numérique ;
 - que les dates sont valides ;
-- qu'il n'y a pas de chevauchement incoherent.
+- qu'il n'y a pas de chevauchement incohérent.
 
 ### Exports utiles
 
 - historique des tarifs ;
-- couts des assemblages ;
-- comparaison de couts ;
+- coûts des assemblages ;
+- comparaison de coûts ;
 - batchs de production ;
 - alertes.
 
 ## 10. Exigences non fonctionnelles
 
-- Application web privee avec authentification.
-- Interface simple, orientee tableau et formulaire.
-- Donnees sauvegardees dans une base fiable.
-- Export Excel ou CSV disponible sur les ecrans principaux.
-- Historique conserve pour audit interne.
+- Application web privée avec authentification.
+- Interface simple, orientée tableau et formulaire.
+- Données sauvegardées dans une base fiable.
+- Export Excel ou CSV disponible sur les écrans principaux.
+- Historique conservé pour audit interne.
 - Calculs explicables ligne par ligne.
-- Sauvegarde reguliere de la base.
+- Sauvegarde régulière de la base.
 
-## 11. Stack technique recommandee
+## 11. Stack technique recommandée
 
 Option pragmatique :
 
 - Frontend : Next.js ou React.
-- Backend : API integree Next.js ou FastAPI.
-- Base de donnees : PostgreSQL.
+- Backend : API intégrée Next.js ou FastAPI.
+- Base de données : PostgreSQL.
 - Authentification : login simple.
-- Import/export : CSV au depart, Excel ensuite.
-- Hebergement : VPS ou plateforme cloud privee.
+- Import/export : CSV au départ, Excel ensuite.
+- Hébergement : VPS ou plateforme cloud privée.
 
-Pour un outil interne, il faut privilegier la robustesse, la lisibilite des donnees et la facilite de maintenance.
+Pour un outil interne, il faut privilégier la robustesse, la lisibilité des données et la facilité de maintenance.
 
-## 12. Priorites de developpement
+## 12. Priorités de développement
 
 ### Lot 1 - Fondation
 
-- base de donnees ;
+- base de données ;
 - gestion des pays ;
 - gestion des fournisseurs ;
 - gestion des grains ;
-- saisie des tarifs dates.
+- saisie des tarifs datés.
 
 ### Lot 2 - Calculs
 
-- creation des assemblages ;
+- création des assemblages ;
 - validation des pourcentages ;
-- calcul du cout a une date ;
+- calcul du coût à une date ;
 - comparaison entre deux dates ;
-- prise en compte de la perte de torrefaction.
+- prise en compte de la perte de torréfaction.
 
 ### Lot 3 - Production
 
-- creation de batchs ;
-- figer le cout historique ;
+- création de batchs ;
+- figer le coût historique ;
 - historique des productions ;
 - export.
 
 ### Lot 4 - Alertes
 
 - seuils prix grain ;
-- seuils cout assemblage ;
+- seuils coût assemblage ;
 - seuils marge ;
-- tarifs bientot expires ;
+- tarifs bientôt expirés ;
 - prix manquants.
 
 ### Lot 5 - Confort d'usage
 
 - imports CSV / Excel ;
 - exports ;
-- filtres avances ;
+- filtres avancés ;
 - tableau de bord.
 
-## 13. Evolutions possibles en V2
+## 13. Évolutions possibles en V2
 
 - Synchronisation partielle avec le logiciel de gestion existant.
-- Connexion a une API de taux de change.
-- Connexion a une API de marche a terme.
-- Gestion du stock cafe vert.
-- Gestion du stock cafe torrefie.
-- Simulation d'achat selon scenarios.
+- Connexion à une API de taux de change.
+- Connexion à une API de marché a terme.
+- Gestion du stock café vert.
+- Gestion du stock café torréfié.
+- Simulation d'achat selon scénarios.
 - Gestion des contrats fournisseurs.
-- Analyse de rentabilite par produit fini.
-- Role multi-utilisateur.
+- Analyse de rentabilité par produit fini.
+- Rôle multi-utilisateur.
 
-## 14. Questions a valider avec le torrefacteur
+## 14. Questions à valider avec le torréfacteur
 
-1. Combien de grains differents suit-il actuellement ?
+1. Combien de grains différents suit-il actuellement ?
 2. Les prix sont-ils toujours au kg ?
 3. Travaille-t-il uniquement en EUR ou aussi en USD ?
-4. Les prix negocies sont-ils par fournisseur, par lot ou par origine ?
-5. Les assemblages utilisent-ils des grains generiques ou des lots precis ?
-6. La perte de torrefaction est-elle fixe par assemblage ou variable par production ?
+4. Les prix négociés sont-ils par fournisseur, par lot ou par origine ?
+5. Les assemblages utilisent-ils des grains génériques ou des lots précis ?
+6. La perte de torréfaction est-elle fixe par assemblage ou variable par production ?
 7. A-t-il besoin de suivre le stock dans cette V1 ?
 8. Quel format d'import utilise-t-il aujourd'hui : Excel, CSV ou autre ?
 9. Quels sont ses 5 assemblages les plus importants ?
-10. Quelle alerte serait la plus utile au quotidien : prix, marge, stock ou tarif expire ?
+10. Quelle alerte serait la plus utile au quotidien : prix, marge, stock ou tarif expiré ?
 
-## 15. Proposition de prochaine etape
+## 15. Proposition de prochaine étape
 
-La prochaine etape consiste a transformer ce cahier des charges en modele de donnees detaille, puis en maquettes d'ecrans.
+La prochaine étape consiste à transformer ce cahier des charges en modèle de données détaillé, puis en maquettes d'écrans.
 
-Ordre conseille :
+Ordre conseillé :
 
-1. Valider les objets metier avec le torrefacteur.
+1. Valider les objets métier avec le torréfacteur.
 2. Choisir les champs obligatoires et optionnels.
-3. Construire un exemple de donnees reel avec 3 grains, 2 fournisseurs et 2 assemblages.
+3. Construire un exemple de données réel avec 3 grains, 2 fournisseurs et 2 assemblages.
 4. Tester les calculs sur cet exemple.
-5. Prototyper les ecrans principaux.
-
+5. Prototyper les écrans principaux.

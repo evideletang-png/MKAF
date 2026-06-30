@@ -1,18 +1,18 @@
-# Outil cout cafe torrefacteur
+# Outil coût café torréfacteur
 
-Prototype interne Max Cafes pour suivre les tarifs dates des grains, calculer le cout des assemblages, prevoir les commandes et figer le cout des batchs de production.
+Prototype interne Max Cafés pour suivre les tarifs datés des grains, calculer le coût des assemblages, prévoir les commandes et figer le coût des batchs de production.
 
-## Fonctionnalites de la V0
+## Fonctionnalités de la V0
 
-- Catalogue de grains et fournisseurs de demonstration.
-- Saisie de tarifs dates par grain et fournisseur.
-- Calcul du cout d'un assemblage a une date donnee.
-- Comparaison du cout entre deux dates.
-- Estimation de commandes par rapport a l'activite N-1 jour par jour.
-- Facteurs de prevision : croissance, saisonnalite, evenements, meteo, promos et stock de securite.
-- Conversion de la demande prevue en besoin de cafe vert par grain.
-- Alertes simples sur prix manquant, cout trop eleve et tarif bientot expire.
-- Creation de batchs de production avec cout fige.
+- Catalogue de grains et fournisseurs de démonstration.
+- Saisie de tarifs datés par grain et fournisseur.
+- Calcul du coût d'un assemblage à une date donnée.
+- Comparaison du coût entre deux dates.
+- Estimation de commandes par rapport à l'activité N-1 jour par jour.
+- Facteurs de prévision : croissance, saisonnalité, événements, météo, promos et stock de sécurité.
+- Conversion de la demande prévue en besoin de café vert par grain.
+- Alertes simples sur prix manquant, coût trop élevé et tarif bientôt expiré.
+- Création de batchs de production avec coût figé.
 - Sauvegarde locale dans le navigateur pour le prototype.
 
 ## Lancer en local
@@ -27,25 +27,25 @@ Puis ouvrir :
 http://localhost:3000
 ```
 
-## Deployer sur Railway
+## Déployer sur Railway
 
 L'application est compatible Railway telle quelle :
 
 - runtime Node.js ;
 - script `npm start` ;
-- ecoute sur `process.env.PORT`.
+- écoute sur `process.env.PORT`.
 
-Etapes conseillees :
+Étapes conseillées :
 
-1. Pousser ce dossier sur un depot GitHub prive.
-2. Creer un projet Railway depuis ce depot GitHub.
-3. Laisser Railway detecter l'application Node.js.
-4. Verifier que la commande de demarrage est `npm start`.
-5. Generer un domaine public ou prive selon le besoin.
+1. Pousser ce dossier sur un dépôt GitHub privé.
+2. Créer un projet Railway depuis ce dépôt GitHub.
+3. Laisser Railway détecter l'application Node.js.
+4. Vérifier que la commande de démarrage est `npm start`.
+5. Générer un domaine public ou privé selon le besoin.
 
 ## Limite importante de cette V0
 
-Les donnees sont stockees dans le `localStorage` du navigateur. C'est suffisant pour valider les calculs et les ecrans, mais pas pour un usage multi-poste ou une production durable.
+Les données sont stockées dans le `localStorage` du navigateur. C'est suffisant pour valider les calculs et les écrans, mais pas pour un usage multi-poste ou une production durable.
 
 La prochaine version devra ajouter :
 
@@ -53,4 +53,4 @@ La prochaine version devra ajouter :
 - une authentification ;
 - des imports/exports CSV ;
 - une vraie API serveur ;
-- une sauvegarde des prix, assemblages, activite N-1, previsions et batchs en base.
+- une sauvegarde des prix, assemblages, activité N-1, prévisions et batchs en base.

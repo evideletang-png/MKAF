@@ -1,24 +1,24 @@
-# Deploiement GitHub + Railway
+# Déploiement GitHub + Railway
 
-Ce guide part du principe que le depot local est deja initialise et que le commit initial existe.
+Ce guide part du principe que le dépôt local est déjà initialisé et que le commit initial existe.
 
 ## 1. Re-authentifier GitHub CLI
 
-Le jeton `gh` local doit etre valide avant de pouvoir creer le depot et pousser le code.
+Le jeton `gh` local doit être valide avant de pouvoir créer le dépôt et pousser le code.
 
 ```bash
 gh auth login -h github.com
 ```
 
-Puis verifier :
+Puis vérifier :
 
 ```bash
 gh auth status
 ```
 
-## 2. Creer le depot GitHub prive et pousser
+## 2. Créer le dépôt GitHub privé et pousser
 
-Commande conseillee :
+Commande conseillée :
 
 ```bash
 gh repo create outil-cout-cafe-torrefacteur --private --source=. --remote=origin --push
@@ -26,11 +26,11 @@ gh repo create outil-cout-cafe-torrefacteur --private --source=. --remote=origin
 
 Cette commande :
 
-- cree un depot GitHub prive ;
+- crée un dépôt GitHub privé ;
 - ajoute le remote `origin` ;
 - pousse la branche `main`.
 
-Si le depot existe deja :
+Si le dépôt existe déjà :
 
 ```bash
 git remote add origin git@github.com:VOTRE_COMPTE/outil-cout-cafe-torrefacteur.git
@@ -41,18 +41,18 @@ git push -u origin main
 
 Dans Railway :
 
-1. Creer un nouveau projet.
-2. Choisir un deploiement depuis GitHub.
-3. Selectionner le depot `outil-cout-cafe-torrefacteur`.
-4. Laisser Railway detecter l'application Node.js.
-5. Verifier la commande de demarrage :
+1. Créer un nouveau projet.
+2. Choisir un déploiement depuis GitHub.
+3. Sélectionner le dépôt `outil-cout-cafe-torrefacteur`.
+4. Laisser Railway détecter l'application Node.js.
+5. Vérifier la commande de démarrage :
 
 ```bash
 npm start
 ```
 
 6. Deployer.
-7. Generer un domaine depuis les parametres du service.
+7. Générer un domaine depuis les paramètres du service.
 
 ## 4. Variables Railway
 
@@ -70,25 +70,24 @@ Pour forcer l'hote localement uniquement :
 HOST=127.0.0.1 npm start
 ```
 
-Sur Railway, ne pas definir `HOST` sauf besoin particulier.
+Sur Railway, ne pas définir `HOST` sauf besoin particulier.
 
-## 5. Verification apres deploiement
+## 5. Vérification après déploiement
 
-Verifier dans le navigateur :
+Vérifier dans le navigateur :
 
 - le tableau de bord s'affiche ;
-- le calculateur affiche un cout pour `Espresso Maison` au `2026-02-15` ;
+- le calculateur affiche un coût pour `Espresso Maison` au `2026-02-15` ;
 - l'ajout d'un tarif fonctionne ;
-- la creation d'un batch fige un cout ;
-- l'export JSON telecharge les donnees.
+- la création d'un batch fige un coût ;
+- l'export JSON télécharge les données.
 
-## 6. Limite avant usage reel
+## 6. Limite avant usage réel
 
-Cette premiere version stocke les donnees dans le navigateur. Pour un usage reel, ajouter en priorite :
+Cette première version stocke les données dans le navigateur. Pour un usage réel, ajouter en priorité :
 
 - PostgreSQL Railway ;
 - authentification ;
 - API serveur ;
 - sauvegarde des tarifs, assemblages et batchs en base ;
 - import/export CSV.
-

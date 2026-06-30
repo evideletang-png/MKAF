@@ -1,39 +1,39 @@
-# Strategie de prediction des commandes
+# Stratégie de prédiction des commandes
 
 Version: 0.1  
 Date: 30 juin 2026
 
 ## Objectif
 
-Ajouter une intelligence de prevision pour aider le torrefacteur a estimer :
+Ajouter une intelligence de prévision pour aider le torréfacteur à estimer :
 
 - la demande attendue par jour ;
 - la demande par assemblage ;
-- le besoin en cafe vert par grain ;
-- la quantite conseillee a commander apres prise en compte du stock.
+- le besoin en café vert par grain ;
+- la quantité conseillée à commander après prise en compte du stock.
 
-Le point de depart est l'activite N-1 au jour le jour. L'outil ne remplace pas le jugement du torrefacteur : il fournit une base chiffree, ajustable avec des facteurs metier.
+Le point de départ est l'activité N-1 au jour le jour. L'outil ne remplace pas le jugement du torréfacteur : il fournit une base chiffrée, ajustable avec des facteurs métier.
 
-## Principe du modele V0
+## Principe du modèle V0
 
-Pour chaque jour a prevoir :
+Pour chaque jour à prévoir :
 
-1. Chercher l'activite du meme jour l'annee precedente.
-2. Calculer une correction par jour de semaine a partir de l'historique.
+1. Chercher l'activité du même jour l'année précédente.
+2. Calculer une correction par jour de semaine à partir de l'historique.
 3. Combiner les deux bases :
-   - 75 % activite N-1 du jour exact ;
-   - 25 % moyenne historique du meme jour de semaine.
+   - 75 % activité N-1 du jour exact ;
+   - 25 % moyenne historique du même jour de semaine.
 4. Appliquer les facteurs saisis par l'utilisateur :
    - croissance vs N-1 ;
    - saison ou contexte local ;
-   - evenements, meteo ou jours particuliers ;
+   - événements, météo ou jours particuliers ;
    - promotions ou commandes connues ;
-   - stock de securite.
-5. Transformer la demande torrefiee en besoin de cafe vert selon les pertes de torrefaction.
+   - stock de sécurité.
+5. Transformer la demande torréfiée en besoin de café vert selon les pertes de torréfaction.
 6. Repartir le besoin par grain selon les recettes d'assemblage.
-7. Soustraire le stock disponible pour obtenir une quantite conseillee a commander.
+7. Soustraire le stock disponible pour obtenir une quantité conseillée à commander.
 
-## Formule simplifiee
+## Formule simplifiée
 
 Base journaliere :
 
@@ -51,19 +51,19 @@ facteur =
   * (1 + promos_commandes_connues)
 ```
 
-Prevision torrefiee :
+Prévision torréfiée :
 
 ```text
 prevision_kg_torrefie = base * facteur
 ```
 
-Besoin cafe vert :
+Besoin café vert :
 
 ```text
 besoin_kg_vert = prevision_kg_torrefie / (1 - perte_torrefaction)
 ```
 
-Commande conseillee :
+Commande conseillée :
 
 ```text
 commande_kg = max(0, besoin_kg_vert * (1 + stock_securite) - stock_disponible)
@@ -71,40 +71,39 @@ commande_kg = max(0, besoin_kg_vert * (1 + stock_securite) - stock_disponible)
 
 ## Facteurs a enrichir en V1
 
-Les facteurs utiles a integrer dans une version avec base PostgreSQL :
+Les facteurs utiles à intégrer dans une version avec base PostgreSQL :
 
-- commandes confirmees par client ;
-- calendrier des jours feries ;
+- commandes confirmées par client ;
+- calendrier des jours fériés ;
 - vacances scolaires ;
-- meteo locale ;
-- evenements locaux ;
-- operation commerciale ou promotion ;
+- météo locale ;
+- événements locaux ;
+- opération commerciale ou promotion ;
 - canal de vente : boutique, CHR, web, marche, B2B ;
 - ruptures passees ;
-- delai fournisseur ;
+- délai fournisseur ;
 - minimum de commande fournisseur ;
 - conditionnement par sac.
 
-## Donnees a stocker
+## Données à stocker
 
-Tables a prevoir :
+Tables à prévoir :
 
-- `sales_activity_daily` : activite historique par date, produit ou assemblage ;
-- `forecast_runs` : lancement d'une prevision avec ses parametres ;
+- `sales_activity_daily` : activité historique par date, produit ou assemblage ;
+- `forecast_runs` : lancement d'une prévision avec ses paramètres ;
 - `forecast_daily_lines` : resultat par jour ;
 - `forecast_blend_lines` : resultat par assemblage ;
 - `forecast_bean_requirements` : besoin par grain ;
 - `forecast_factors` : facteurs appliques et justification.
 
-## Pourquoi commencer par un modele explicable
+## Pourquoi commencer par un modèle explicable
 
-Pour un outil interne, il vaut mieux commencer avec un modele transparent :
+Pour un outil interne, il vaut mieux commencer avec un modèle transparent :
 
-- le torrefacteur comprend pourquoi une quantite est proposee ;
+- le torréfacteur comprend pourquoi une quantité est proposée ;
 - les erreurs sont visibles ;
-- les facteurs peuvent etre ajustes manuellement ;
-- le modele peut etre compare a la realite ;
-- les donnees collectees serviront plus tard a entrainer un modele statistique plus avance.
+- les facteurs peuvent être ajustes manuellement ;
+- le modèle peut être compare à la realite ;
+- les données collectées serviront plus tard à entraîner un modèle statistique plus avancé.
 
-Une V2 pourrait ajouter un vrai modele de machine learning, mais seulement apres plusieurs mois de donnees propres et comparables.
-
+Une V2 pourrait ajouter un vrai modèle de machine learning, mais seulement après plusieurs mois de données propres et comparables.
