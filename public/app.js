@@ -525,7 +525,6 @@ const els = {
   cancelHistoryEdit: document.querySelector("#cancelHistoryEdit"),
   historyRows: document.querySelector("#historyRows"),
   historyRowsCount: document.querySelector("#historyRowsCount"),
-  exportData: document.querySelector("#exportData"),
   exportCsvButtons: document.querySelectorAll("[data-export-csv]"),
   importLogRows: document.querySelector("#importLogRows"),
   undoLastImport: document.querySelector("#undoLastImport"),
@@ -3697,10 +3696,6 @@ function downloadTextFile(filename, content, type) {
   URL.revokeObjectURL(url);
 }
 
-function exportData() {
-  downloadTextFile(`outil-cout-cafe-${today}.json`, JSON.stringify(state, null, 2), "application/json");
-}
-
 function csvEscape(value, delimiter = ";") {
   const text = value === null || value === undefined ? "" : String(value);
   const needsQuotes = text.includes(delimiter) || text.includes("\n") || text.includes("\r") || text.includes('"');
@@ -5084,7 +5079,6 @@ els.priceRows.addEventListener("click", deletePrice);
 els.calculatorForm.addEventListener("submit", runCalculator);
 els.forecastForm.addEventListener("submit", runForecast);
 els.batchForm.addEventListener("submit", addBatch);
-els.exportData.addEventListener("click", exportData);
 els.exportCsvButtons.forEach((button) => button.addEventListener("click", exportCsv));
 els.undoLastImport.addEventListener("click", undoLastImport);
 els.supplierImportForm.addEventListener("submit", importSuppliers);
