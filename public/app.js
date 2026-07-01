@@ -369,11 +369,15 @@ const els = {
   dataTabs: document.querySelectorAll(".sub-tab"),
   dataSections: document.querySelectorAll(".data-section"),
   views: document.querySelectorAll(".view"),
+  dataQualityList: document.querySelector("#dataQualityList"),
+  dataQualityCount: document.querySelector("#dataQualityCount"),
   storageStatus: document.querySelector("#storageStatus"),
   metrics: document.querySelector("#metrics"),
   alertsList: document.querySelector("#alertsList"),
   alertCount: document.querySelector("#alertCount"),
   blendCards: document.querySelector("#blendCards"),
+  qualityList: document.querySelector("#qualityList"),
+  qualityCount: document.querySelector("#qualityCount"),
   priceForm: document.querySelector("#priceForm"),
   priceBean: document.querySelector("#priceBean"),
   priceSupplier: document.querySelector("#priceSupplier"),
@@ -1367,6 +1371,391 @@ function calculateAlerts(date = today) {
   return alerts;
 }
 
+function addQualityIssue(issues, severity, title, message) {
+  issues.push({ severity, title, message });
+}
+
+function addDuplicateIssues(issues, rows, getLabel, label) {
+  const groups = new Map();
+
+  rows.forEach((row) => {
+    const value = String(getLabel(row) || "").trim();
+    const key = normalizeKey(value);
+    if (!key) return;
+    const group = groups.get(key) || [];
+    group.push(value);
+    groups.set(key, group);
+  });
+
+  [...groups.values()]
+    .filter((group) => group.length > 1)
+    .forEach((group) => {
+      addQualityIssue(
+        issues,
+        "warning",
+        `Doublon ${label}`,
+        `${group[0]} apparaît ${group.length} fois.`
+      );
+    });
+}
+
+function countRows(rows, predicate) {
+  return rows.reduce((count, row) => count + (predicate(row) ? 1 : 0), 0);
+}
+
+function dateRangesOverlap(left, right) {
+  const leftTo = left.validTo || "9999-12-31";
+  const rightTo = right.validTo || "9999-12-31";
+  return left.validFrom <= rightTo && right.validFrom <= leftTo;
+}
+
+function calculateDataQualityIssues() {
+  const issues = [];
+  const countryIds = new Set(state.countries.map((country) => country.id));
+  const supplierIds = new Set(state.suppliers.map((supplier) => supplier.id));
+  const beanIds = new Set(state.beans.map((bean) => bean.id));
+  const blendIds = new Set(state.blends.map((blend) => blend.id));
+
+  addDuplicateIssues(issues, state.countries, (country) => country.name, "pays");
+  addDuplicateIssues(issues, state.suppliers, (supplier) => supplier.name, "fournisseur");
+  addDuplicateIssues(issues, state.beans, (bean) => bean.commercialName, "grain");
+  addDuplicateIssues(issues, state.blends, (blend) => blend.name, "assemblage");
+
+  state.countries.forEach((country) => {
+    if (!country.region?.trim()) {
+      addQualityIssue(issues, "warning", country.name || "Pays", "Région non renseignée.");
+    }
+  });
+
+  state.suppliers.forEach((supplier) => {
+    const leadTime = toFiniteNumber(supplier.averageLeadTimeDays);
+    const reliability = toFiniteNumber(supplier.reliabilityPct);
+
+    if (!supplier.name?.trim()) {
+      addQualityIssue(issues, "danger", "Fournisseur", "Nom fournisseur manquant.");
+    }
+
+    if (Number.isFinite(leadTime) && leadTime < 0) {
+      addQualityIssue(issues, "danger", supplier.name || "Fournisseur", "Délai moyen négatif.");
+    }
+
+    if (Number.isFinite(reliability) && (reliability < 0 || reliability > 100)) {
+      addQualityIssue(issues, "danger", supplier.name || "Fournisseur", "Fiabilité hors plage 0-100 %.");
+    }
+  });
+
+  state.beans.forEach((bean) => {
+    const name = bean.commercialName || "Grain";
+    const landedCost = toFiniteNumber(bean.landedCostPerKg);
+    const scaScore = toFiniteNumber(bean.scaScore);
+    const moisturePct = toFiniteNumber(bean.moisturePct);
+    const density = toFiniteNumber(bean.density);
+
+    if (!bean.commercialName?.trim()) {
+      addQualityIssue(issues, "danger", "Grain", "Nom commercial manquant.");
+    }
+
+    if (!countryIds.has(bean.countryId)) {
+      addQualityIssue(issues, "danger", name, "Pays introuvable dans les référentiels.");
+    }
+
+    if (!supplierIds.has(bean.defaultSupplierId)) {
+      addQualityIssue(issues, "danger", name, "Fournisseur par défaut introuvable.");
+    }
+
+    if (!Number.isFinite(landedCost) || landedCost <= 0) {
+      addQualityIssue(issues, "warning", name, "Coût rendu / kg absent ou nul.");
+    }
+
+    if (Number.isFinite(scaScore) && (scaScore < 0 || scaScore > 100)) {
+      addQualityIssue(issues, "danger", name, "Score SCA hors plage 0-100.");
+    }
+
+    if (Number.isFinite(moisturePct) && (moisturePct < 0 || moisturePct > 25)) {
+      addQualityIssue(issues, "danger", name, "Humidité hors plage cohérente.");
+    }
+
+    if (Number.isFinite(density) && density < 0) {
+      addQualityIssue(issues, "danger", name, "Densité négative.");
+    }
+
+    if (!state.greenStocks.some((stock) => stock.beanId === bean.id)) {
+      addQualityIssue(issues, "warning", name, "Aucune ligne de stock associée.");
+    }
+  });
+
+  state.prices.forEach((price) => {
+    const bean = getById("beans", price.beanId);
+    const supplier = getById("suppliers", price.supplierId);
+    const priceValue = toFiniteNumber(price.pricePerKg);
+    const title = bean?.commercialName || "Tarif";
+
+    if (!beanIds.has(price.beanId)) {
+      addQualityIssue(issues, "danger", "Tarif", "Grain introuvable sur une ligne de tarif.");
+    }
+
+    if (!supplierIds.has(price.supplierId)) {
+      addQualityIssue(issues, "danger", title, "Fournisseur introuvable sur une ligne de tarif.");
+    }
+
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      addQualityIssue(issues, "danger", title, "Prix / kg absent, nul ou négatif.");
+    }
+
+    if (!isIsoDate(price.validFrom)) {
+      addQualityIssue(issues, "danger", title, "Date de début de tarif invalide.");
+    }
+
+    if (price.validTo && !isIsoDate(price.validTo)) {
+      addQualityIssue(issues, "danger", title, "Date de fin de tarif invalide.");
+    }
+
+    if (isIsoDate(price.validFrom) && price.validTo && isIsoDate(price.validTo) && price.validTo < price.validFrom) {
+      addQualityIssue(issues, "danger", title, "Date de fin antérieure à la date de début.");
+    }
+
+    if (!price.currency?.trim()) {
+      addQualityIssue(issues, "warning", title, "Devise non renseignée.");
+    }
+
+    if (supplier && price.currency && supplier.defaultCurrency && price.currency !== supplier.defaultCurrency) {
+      addQualityIssue(
+        issues,
+        "warning",
+        title,
+        `Devise ${price.currency} différente de la devise fournisseur ${supplier.defaultCurrency}.`
+      );
+    }
+  });
+
+  const validPriceGroups = state.prices
+    .filter((price) => {
+      return (
+        beanIds.has(price.beanId) &&
+        supplierIds.has(price.supplierId) &&
+        isIsoDate(price.validFrom) &&
+        (!price.validTo || isIsoDate(price.validTo)) &&
+        (!price.validTo || price.validTo >= price.validFrom)
+      );
+    })
+    .reduce((groups, price) => {
+      const key = `${price.beanId}|${price.supplierId}`;
+      const rows = groups.get(key) || [];
+      rows.push(price);
+      groups.set(key, rows);
+      return groups;
+    }, new Map());
+
+  validPriceGroups.forEach((prices) => {
+    const sortedPrices = [...prices].sort((a, b) => a.validFrom.localeCompare(b.validFrom));
+    let hasOverlap = false;
+
+    for (let index = 0; index < sortedPrices.length; index += 1) {
+      for (let next = index + 1; next < sortedPrices.length; next += 1) {
+        if (dateRangesOverlap(sortedPrices[index], sortedPrices[next])) {
+          hasOverlap = true;
+          break;
+        }
+      }
+      if (hasOverlap) break;
+    }
+
+    if (hasOverlap) {
+      const bean = getById("beans", sortedPrices[0].beanId);
+      const supplier = getById("suppliers", sortedPrices[0].supplierId);
+      addQualityIssue(
+        issues,
+        "danger",
+        "Tarifs qui se chevauchent",
+        `${bean?.commercialName || "Grain"} / ${supplier?.name || "fournisseur"} a plusieurs tarifs actifs sur une même période.`
+      );
+    }
+  });
+
+  state.blends.forEach((blend) => {
+    const title = blend.name || "Assemblage";
+    const roastLossPct = toFiniteNumber(blend.roastLossPct);
+    const totalPct = (blend.components || []).reduce((sum, component) => sum + Number(component.percentage || 0), 0);
+    const componentBeanKeys = new Map();
+
+    if (!blend.name?.trim()) {
+      addQualityIssue(issues, "danger", "Assemblage", "Nom d'assemblage manquant.");
+    }
+
+    if (!blend.components?.length) {
+      addQualityIssue(issues, "danger", title, "Composition vide.");
+    }
+
+    if (blend.components?.length && Math.abs(totalPct - 100) > 0.1) {
+      addQualityIssue(issues, "danger", title, `Composition à ${formatPct(totalPct)} au lieu de 100 %.`);
+    }
+
+    if (!Number.isFinite(roastLossPct) || roastLossPct <= 0 || roastLossPct >= 50) {
+      addQualityIssue(issues, "warning", title, "Perte de torréfaction absente ou hors plage courante.");
+    }
+
+    ["packagingCostPerKg", "energyCostPerKg", "logisticsCostPerKg", "targetSalePricePerKg", "maxCostPerKg"].forEach((field) => {
+      const value = toFiniteNumber(blend[field]);
+      if (Number.isFinite(value) && value < 0) {
+        addQualityIssue(issues, "danger", title, "Un coût ou prix cible est négatif.");
+      }
+    });
+
+    (blend.components || []).forEach((component) => {
+      const bean = getById("beans", component.beanId);
+      const percentage = toFiniteNumber(component.percentage);
+      const beanKey = component.beanId || "";
+
+      if (!beanIds.has(component.beanId)) {
+        addQualityIssue(issues, "danger", title, "Un grain de la composition est introuvable.");
+      }
+
+      if (!Number.isFinite(percentage) || percentage <= 0) {
+        addQualityIssue(issues, "warning", title, `${bean?.commercialName || "Une ligne"} a un pourcentage absent ou nul.`);
+      }
+
+      if (beanKey) {
+        componentBeanKeys.set(beanKey, (componentBeanKeys.get(beanKey) || 0) + 1);
+      }
+    });
+
+    componentBeanKeys.forEach((count, beanId) => {
+      if (count <= 1) return;
+      const bean = getById("beans", beanId);
+      addQualityIssue(issues, "warning", title, `${bean?.commercialName || "Un grain"} apparaît ${count} fois dans la composition.`);
+    });
+  });
+
+  const stockGroups = state.greenStocks.reduce((groups, stock) => {
+    const rows = groups.get(stock.beanId) || [];
+    rows.push(stock);
+    groups.set(stock.beanId, rows);
+    return groups;
+  }, new Map());
+
+  stockGroups.forEach((rows, beanId) => {
+    if (rows.length <= 1) return;
+    const bean = getById("beans", beanId);
+    addQualityIssue(issues, "danger", bean?.commercialName || "Stock", "Plusieurs lignes de stock pour le même grain.");
+  });
+
+  state.greenStocks.forEach((stock) => {
+    const bean = getById("beans", stock.beanId);
+    const quantityKg = toFiniteNumber(stock.quantityKg);
+    const incomingKg = toFiniteNumber(stock.incomingKg);
+    const title = bean?.commercialName || "Stock";
+
+    if (!beanIds.has(stock.beanId)) {
+      addQualityIssue(issues, "danger", "Stock", "Ligne de stock associée à un grain introuvable.");
+    }
+
+    if (Number.isFinite(quantityKg) && quantityKg < 0) {
+      addQualityIssue(issues, "danger", title, "Stock négatif.");
+    }
+
+    if (Number.isFinite(incomingKg) && incomingKg < 0) {
+      addQualityIssue(issues, "danger", title, "Commande en cours négative.");
+    }
+
+    if (stock.eta && !isIsoDate(stock.eta)) {
+      addQualityIssue(issues, "warning", title, "ETA invalide.");
+    }
+  });
+
+  const invalidHistoryDates = countRows(state.historicalOrders, (order) => !isIsoDate(order.date));
+  const missingHistoryBlends = countRows(state.historicalOrders, (order) => !blendIds.has(order.blendId));
+  const invalidHistoryKg = countRows(state.historicalOrders, (order) => {
+    const roastedKg = toFiniteNumber(order.roastedKg);
+    return !Number.isFinite(roastedKg) || roastedKg <= 0;
+  });
+
+  if (invalidHistoryDates > 0) {
+    addQualityIssue(issues, "warning", "Activité N-1", `${invalidHistoryDates} ligne(s) avec date invalide.`);
+  }
+  if (missingHistoryBlends > 0) {
+    addQualityIssue(issues, "warning", "Activité N-1", `${missingHistoryBlends} ligne(s) avec assemblage introuvable.`);
+  }
+  if (invalidHistoryKg > 0) {
+    addQualityIssue(issues, "warning", "Activité N-1", `${invalidHistoryKg} ligne(s) avec kg torréfiés absents ou nuls.`);
+  }
+
+  const otherSupplies = state.otherSupplies || [];
+  const invalidOtherSupplyDates = countRows(otherSupplies, (item) => !isIsoDate(item.validFrom));
+  const invalidOtherSupplyAmounts = countRows(otherSupplies, (item) => {
+    const quantity = toFiniteNumber(item.quantity);
+    const unitCost = toFiniteNumber(item.unitCost);
+    return !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitCost) || unitCost <= 0;
+  });
+  const missingOtherSupplySuppliers = countRows(otherSupplies, (item) => item.supplierId && !supplierIds.has(item.supplierId));
+
+  if (invalidOtherSupplyDates > 0) {
+    addQualityIssue(issues, "warning", "Autres approvisionnements", `${invalidOtherSupplyDates} ligne(s) avec date invalide.`);
+  }
+  if (invalidOtherSupplyAmounts > 0) {
+    addQualityIssue(issues, "warning", "Autres approvisionnements", `${invalidOtherSupplyAmounts} ligne(s) avec quantité ou coût invalide.`);
+  }
+  if (missingOtherSupplySuppliers > 0) {
+    addQualityIssue(issues, "warning", "Autres approvisionnements", `${missingOtherSupplySuppliers} ligne(s) avec fournisseur introuvable.`);
+  }
+
+  const invalidBatches = countRows(state.batches, (batch) => {
+    const roastedQuantityKg = toFiniteNumber(batch.roastedQuantityKg);
+    return !blendIds.has(batch.blendId) || !Number.isFinite(roastedQuantityKg) || roastedQuantityKg <= 0;
+  });
+
+  if (invalidBatches > 0) {
+    addQualityIssue(issues, "warning", "Production", `${invalidBatches} batch(es) avec assemblage ou quantité invalide.`);
+  }
+
+  return issues.sort((a, b) => {
+    const severityOrder = { danger: 0, warning: 1 };
+    return severityOrder[a.severity] - severityOrder[b.severity] || a.title.localeCompare(b.title, "fr");
+  });
+}
+
+function renderQualityIssueList(issues, totalCount = issues.length) {
+  if (issues.length === 0) {
+    return `
+      <div class="result-card">
+        <strong>Données cohérentes</strong>
+        <span>Référentiels, tarifs, stocks et assemblages ne présentent pas d'incohérence détectée.</span>
+      </div>
+    `;
+  }
+
+  const hiddenCount = Math.max(0, totalCount - issues.length);
+  const rows = issues
+    .map(
+      (issue) => `
+        <div class="alert-row ${escapeHtml(issue.severity)}">
+          <strong>${escapeHtml(issue.title)}</strong>
+          <span>${escapeHtml(issue.message)}</span>
+        </div>
+      `
+    )
+    .join("");
+  const hiddenRow = hiddenCount
+    ? `
+      <div class="result-card">
+        <strong>${hiddenCount} autre${hiddenCount > 1 ? "s" : ""} point${hiddenCount > 1 ? "s" : ""}</strong>
+        <span>Ouvre l'onglet Données pour voir la liste complète.</span>
+      </div>
+    `
+    : "";
+
+  return `${rows}${hiddenRow}`;
+}
+
+function renderQualityIssues() {
+  const issues = calculateDataQualityIssues();
+  const dashboardIssues = issues.slice(0, 6);
+
+  if (els.qualityCount) els.qualityCount.textContent = issues.length;
+  if (els.dataQualityCount) els.dataQualityCount.textContent = issues.length;
+  if (els.qualityList) els.qualityList.innerHTML = renderQualityIssueList(dashboardIssues, issues.length);
+  if (els.dataQualityList) els.dataQualityList.innerHTML = renderQualityIssueList(issues);
+}
+
 function emptyState() {
   return document.querySelector("#emptyStateTemplate").innerHTML;
 }
@@ -2110,6 +2499,7 @@ function renderAll() {
   renderSelects();
   renderMetrics();
   renderAlerts();
+  renderQualityIssues();
   renderBlendCards();
   renderSupplyOverview();
   renderOtherSupplies();

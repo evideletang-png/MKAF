@@ -22,6 +22,7 @@ Prototype interne Max Cafés pour piloter les grains, les fournisseurs, les asse
 - Exports CSV : grains, fournisseurs, tarifs, stocks, activité N-1 et prévisions.
 - Stocks intelligents : consommation moyenne, autonomie, commande en cours, ETA, risque de rupture, valeur immobilisée et journal de mouvements.
 - Alertes sur prix manquant, coût trop élevé, tarif bientôt expiré, autonomie courte, humidité élevée, score SCA faible et fiabilité fournisseur basse.
+- Contrôles de cohérence : doublons, références cassées, tarifs qui se chevauchent, compositions incomplètes, stocks et historiques invalides.
 - Création de batchs de production avec coût figé, machine, opérateur, perte réelle et notes de courbe.
 - Sauvegarde PostgreSQL sur Railway via `DATABASE_URL`.
 - Sauvegarde locale dans le navigateur en mode secours si aucune base n'est configurée.
