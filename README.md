@@ -18,6 +18,7 @@ Prototype interne Max Cafés pour piloter les grains, les fournisseurs, les asse
 - Estimation de commandes par rapport à l'activité N-1 jour par jour.
 - Facteurs de prévision : croissance, saisonnalité, événements, météo, promos et stock de sécurité.
 - Conversion de la demande prévue en besoin de grains café par origine.
+- Plan d'achat prévisionnel : fournisseur habituel, quantité à acheter, date limite, coût estimé, risque et export CSV.
 - Imports CSV des fournisseurs, grains, activité N-1, tarifs et stocks, avec ajout / mise à jour ou remplacement selon le module.
 - Journal des imports avec sauvegarde automatique avant import, erreurs ligne par ligne et annulation du dernier import.
 - Exports CSV : grains, fournisseurs, tarifs, stocks, activité N-1 et prévisions.

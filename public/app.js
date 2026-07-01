@@ -1226,6 +1226,77 @@ function factorMultiplier(settings) {
   ].reduce((multiplier, pct) => multiplier * (1 + Number(pct || 0) / 100), 1);
 }
 
+function purchaseUnitPrice(bean, supplierId, date) {
+  const landedCost = toFiniteNumber(bean?.landedCostPerKg);
+  if (!bean) return { unitCost: null, currency: "EUR" };
+
+  if (supplierId) {
+    const priceResult = findPrice(bean.id, supplierId, date);
+    if (priceResult.status === "ok") {
+      return {
+        unitCost: toFiniteNumber(priceResult.price.pricePerKg),
+        currency: priceResult.price.currency || "EUR"
+      };
+    }
+  }
+
+  const latestPrice = getLatestPrice(bean.id);
+  if (latestPrice) {
+    return {
+      unitCost: toFiniteNumber(latestPrice.pricePerKg),
+      currency: latestPrice.currency || "EUR"
+    };
+  }
+
+  return {
+    unitCost: Number.isFinite(landedCost) ? landedCost : null,
+    currency: "EUR"
+  };
+}
+
+function purchaseRisk(orderKg, stockCoverageDays, leadTimeDays) {
+  if (orderKg <= 0) return "Couvert";
+  if (!Number.isFinite(stockCoverageDays)) return "À qualifier";
+  if (stockCoverageDays <= leadTimeDays) return "Risque rupture";
+  if (stockCoverageDays <= leadTimeDays + 7) return "À commander";
+  return "Planifier";
+}
+
+function purchaseRiskClass(risk) {
+  if (risk === "Risque rupture") return "rupture";
+  if (risk === "À commander") return "surveiller";
+  if (risk === "À qualifier") return "a-qualifier";
+  return "";
+}
+
+function buildPurchasePlanRow(need, settings, horizonDays) {
+  const bean = need.bean;
+  const supplier = getById("suppliers", bean?.defaultSupplierId);
+  const supplierLeadTime = toFiniteNumber(supplier?.averageLeadTimeDays);
+  const leadTimeDays = Math.max(0, Math.round(Number.isFinite(supplierLeadTime) ? supplierLeadTime : 30));
+  const dailyNeedKg = need.requiredKg / Math.max(horizonDays, 1);
+  const stockCoverageDays = dailyNeedKg > 0 ? need.stockKg / dailyNeedKg : null;
+  const depletionDate = Number.isFinite(stockCoverageDays) ? addDays(settings.startDate, Math.floor(stockCoverageDays)) : "";
+  const orderByDate = need.orderKg > 0 && depletionDate ? addDays(depletionDate, -leadTimeDays) : "";
+  const price = purchaseUnitPrice(bean, supplier?.id, settings.startDate);
+  const estimatedCost = Number.isFinite(price.unitCost) ? need.orderKg * price.unitCost : null;
+  const risk = purchaseRisk(need.orderKg, stockCoverageDays, leadTimeDays);
+
+  return {
+    ...need,
+    supplier,
+    leadTimeDays,
+    dailyNeedKg,
+    stockCoverageDays,
+    depletionDate,
+    orderByDate,
+    unitCost: price.unitCost,
+    currency: price.currency,
+    estimatedCost,
+    risk
+  };
+}
+
 function calculateForecast(settings = state.forecastSettings) {
   const safeSettings = {
     ...seedState.forecastSettings,
@@ -1310,19 +1381,23 @@ function calculateForecast(settings = state.forecastSettings) {
       orderKg: Math.max(0, requiredWithSafetyKg - stockKg - incomingKg)
     };
   });
+  const purchasePlan = beanNeeds.map((need) => buildPurchasePlanRow(need, safeSettings, horizonDays));
 
   const totalForecastRoastedKg = dailyRows.reduce((sum, row) => sum + row.forecastKg, 0);
   const totalGreenRequiredKg = beanNeeds.reduce((sum, row) => sum + row.requiredKg, 0);
   const totalOrderKg = beanNeeds.reduce((sum, row) => sum + row.orderKg, 0);
+  const totalRecommendedPurchaseCost = purchasePlan.reduce((sum, row) => sum + Number(row.estimatedCost || 0), 0);
 
   return {
     settings: safeSettings,
     dailyRows,
     blendNeeds: [...blendTotals.values()],
     beanNeeds,
+    purchasePlan,
     totalForecastRoastedKg,
     totalGreenRequiredKg,
     totalOrderKg,
+    totalRecommendedPurchaseCost,
     multiplier
   };
 }
@@ -2100,7 +2175,7 @@ function renderForecast(result = calculateForecast()) {
     ["Demande prévue", formatKg(result.totalForecastRoastedKg), "Café torréfié sur l'horizon"],
     ["Besoin en grains café", formatKg(result.totalGreenRequiredKg), "Avant stock de sécurité"],
     ["À commander", formatKg(result.totalOrderKg), "Après stock disponible"],
-    ["Facteur global", formatPct((result.multiplier - 1) * 100), "Croissance, saison, contexte"]
+    ["Budget achat estimé", formatMoney(result.totalRecommendedPurchaseCost), "Plan d'achat prévisionnel"]
   ]
     .map(
       ([label, value, helper]) => `
@@ -2113,12 +2188,12 @@ function renderForecast(result = calculateForecast()) {
     )
     .join("");
 
-  els.forecastBeanNeeds.innerHTML = renderBeanNeedsTable(result.beanNeeds);
+  els.forecastBeanNeeds.innerHTML = renderPurchasePlanTable(result.purchasePlan);
   els.forecastBlendNeeds.innerHTML = renderBlendNeedsTable(result.blendNeeds);
   els.forecastDailyRows.innerHTML = renderDailyForecastTable(result.dailyRows, result.multiplier);
 }
 
-function renderBeanNeedsTable(rows) {
+function renderPurchasePlanTable(rows) {
   if (!rows || rows.length === 0) return emptyState();
 
   return `
@@ -2126,26 +2201,35 @@ function renderBeanNeedsTable(rows) {
       <thead>
         <tr>
           <th>Grain</th>
-          <th class="numeric">Besoin brut</th>
-          <th class="numeric">Avec sécurité</th>
+          <th>Fournisseur</th>
           <th class="numeric">Stock</th>
           <th class="numeric">En cours</th>
-          <th class="numeric">À commander</th>
+          <th class="numeric">Besoin prévu</th>
+          <th class="numeric">À acheter</th>
+          <th>Date limite</th>
+          <th class="numeric">Coût estimé</th>
+          <th>Risque</th>
         </tr>
       </thead>
       <tbody>
         ${rows
           .map(
-            (row) => `
-              <tr>
-                <td>${escapeHtml(row.bean?.commercialName || "-")}</td>
-                <td class="numeric">${escapeHtml(formatKg(row.requiredKg))}</td>
-                <td class="numeric">${escapeHtml(formatKg(row.requiredWithSafetyKg))}</td>
-                <td class="numeric">${escapeHtml(formatKg(row.stockKg))}</td>
-                <td class="numeric">${escapeHtml(formatKg(row.incomingKg))}</td>
-                <td class="numeric"><strong>${escapeHtml(formatKg(row.orderKg))}</strong></td>
-              </tr>
-            `
+            (row) => {
+              const riskClass = purchaseRiskClass(row.risk);
+              return `
+                <tr>
+                  <td>${escapeHtml(row.bean?.commercialName || "-")}</td>
+                  <td>${escapeHtml(row.supplier?.name || "-")}</td>
+                  <td class="numeric">${escapeHtml(formatKg(row.stockKg))}</td>
+                  <td class="numeric">${escapeHtml(formatKg(row.incomingKg))}</td>
+                  <td class="numeric">${escapeHtml(formatKg(row.requiredWithSafetyKg))}</td>
+                  <td class="numeric"><strong>${escapeHtml(formatKg(row.orderKg))}</strong></td>
+                  <td>${escapeHtml(row.orderByDate || "-")}</td>
+                  <td class="numeric">${escapeHtml(formatMoney(row.estimatedCost, row.currency || "EUR"))}</td>
+                  <td><span class="status-pill ${escapeHtml(riskClass)}">${escapeHtml(row.risk)}</span></td>
+                </tr>
+              `;
+            }
           )
           .join("")}
       </tbody>
@@ -3665,6 +3749,40 @@ function exportForecastCsv() {
   ], rows);
 }
 
+function purchasePlanRowsForCsv(forecast = calculateForecast(state.forecastSettings)) {
+  return forecast.purchasePlan.map((row) => ({
+    grain: row.bean?.commercialName || "",
+    fournisseur: row.supplier?.name || "",
+    stock_kg: row.stockKg,
+    commande_en_cours_kg: row.incomingKg,
+    besoin_prevu_kg: row.requiredWithSafetyKg,
+    quantite_a_acheter_kg: row.orderKg,
+    date_limite_commande: row.orderByDate || "",
+    delai_fournisseur_jours: row.leadTimeDays,
+    cout_unitaire_estime: row.unitCost ?? "",
+    devise: row.currency || "EUR",
+    cout_total_estime: row.estimatedCost ?? "",
+    risque: row.risk
+  }));
+}
+
+function exportPurchasePlanCsv() {
+  downloadCsv(`mkaf-plan-achat-${today}.csv`, [
+    { key: "grain", label: "grain" },
+    { key: "fournisseur", label: "fournisseur" },
+    { key: "stock_kg", label: "stock_kg" },
+    { key: "commande_en_cours_kg", label: "commande_en_cours_kg" },
+    { key: "besoin_prevu_kg", label: "besoin_prevu_kg" },
+    { key: "quantite_a_acheter_kg", label: "quantite_a_acheter_kg" },
+    { key: "date_limite_commande", label: "date_limite_commande" },
+    { key: "delai_fournisseur_jours", label: "delai_fournisseur_jours" },
+    { key: "cout_unitaire_estime", label: "cout_unitaire_estime" },
+    { key: "devise", label: "devise" },
+    { key: "cout_total_estime", label: "cout_total_estime" },
+    { key: "risque", label: "risque" }
+  ], purchasePlanRowsForCsv());
+}
+
 function exportCsv(event) {
   const button = event.target.closest("[data-export-csv]");
   if (!button) return;
@@ -3675,7 +3793,8 @@ function exportCsv(event) {
     prices: exportPricesCsv,
     stocks: exportStocksCsv,
     history: exportHistoryCsv,
-    forecast: exportForecastCsv
+    forecast: exportForecastCsv,
+    purchasePlan: exportPurchasePlanCsv
   };
 
   exporters[button.dataset.exportCsv]?.();
