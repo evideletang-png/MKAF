@@ -508,6 +508,14 @@ const els = {
   historyImportMode: document.querySelector("#historyImportMode"),
   downloadHistoryTemplate: document.querySelector("#downloadHistoryTemplate"),
   historyImportStatus: document.querySelector("#historyImportStatus"),
+  supplierImportForm: document.querySelector("#supplierImportForm"),
+  supplierImportFile: document.querySelector("#supplierImportFile"),
+  downloadSupplierTemplate: document.querySelector("#downloadSupplierTemplate"),
+  supplierImportStatus: document.querySelector("#supplierImportStatus"),
+  beanImportForm: document.querySelector("#beanImportForm"),
+  beanImportFile: document.querySelector("#beanImportFile"),
+  downloadBeanTemplate: document.querySelector("#downloadBeanTemplate"),
+  beanImportStatus: document.querySelector("#beanImportStatus"),
   priceImportForm: document.querySelector("#priceImportForm"),
   priceImportFile: document.querySelector("#priceImportFile"),
   priceImportMode: document.querySelector("#priceImportMode"),
@@ -760,14 +768,17 @@ function findReferenceCountry(value) {
   return referenceCountries.find((country) => normalizeKey(country.name) === key) || null;
 }
 
-function ensureCountry(name) {
+function ensureCountry(name, fallbackRegion = "") {
   const cleanName = name.trim();
+  const cleanRegion = fallbackRegion.trim();
   const referenceCountry = findReferenceCountry(cleanName);
   const existing = findByName("countries", "name", cleanName);
   if (existing) {
     if (referenceCountry) {
       existing.name = referenceCountry.name;
       existing.region = referenceCountry.region;
+    } else if (cleanRegion && !existing.region) {
+      existing.region = cleanRegion;
     }
     return existing;
   }
@@ -775,7 +786,7 @@ function ensureCountry(name) {
   const country = {
     id: referenceCountry?.id || createId("country", cleanName),
     name: referenceCountry?.name || cleanName,
-    region: referenceCountry?.region || ""
+    region: referenceCountry?.region || cleanRegion
   };
 
   state.countries.push(country);
@@ -3716,6 +3727,153 @@ function parseHistoricalImport(text) {
   return { orders, errors };
 }
 
+function csvOptionalText(record, keys) {
+  const value = csvValue(record, keys).trim();
+  return value || undefined;
+}
+
+function csvOptionalNumber(record, keys) {
+  const raw = csvValue(record, keys);
+  if (raw === "") return { hasValue: false, value: null };
+  return { hasValue: true, value: parseLocaleNumber(raw) };
+}
+
+function parseSupplierImport(text) {
+  const records = csvRecords(text);
+  const errors = [];
+  const suppliers = [];
+
+  records.forEach((record, index) => {
+    const lineNumber = index + 2;
+    const name = csvValue(record, ["fournisseur", "supplier", "importateur", "nom", "name"]).trim();
+    const currency = csvOptionalText(record, ["devise", "currency"])?.toUpperCase();
+    const leadTime = csvOptionalNumber(record, ["delai_moyen_jours", "delai_jours", "delai", "lead_time_days"]);
+    const reliability = csvOptionalNumber(record, ["fiabilite_pct", "fiabilite", "reliability_pct"]);
+
+    if (!name) {
+      errors.push(`Ligne ${lineNumber} : fournisseur manquant`);
+      return;
+    }
+
+    if (leadTime.hasValue && (!Number.isFinite(leadTime.value) || leadTime.value < 0)) {
+      errors.push(`Ligne ${lineNumber} : délai moyen invalide`);
+      return;
+    }
+
+    if (reliability.hasValue && (!Number.isFinite(reliability.value) || reliability.value < 0 || reliability.value > 100)) {
+      errors.push(`Ligne ${lineNumber} : fiabilité invalide`);
+      return;
+    }
+
+    suppliers.push({
+      name,
+      defaultCurrency: currency,
+      averageLeadTimeDays: leadTime.hasValue ? Number(leadTime.value.toFixed(0)) : undefined,
+      reliabilityPct: reliability.hasValue ? Number(reliability.value.toFixed(1)) : undefined,
+      incoterms: csvOptionalText(record, ["incoterms", "incoterm"]),
+      paymentTerms: csvOptionalText(record, ["paiement", "conditions_paiement", "payment_terms"]),
+      certifications: csvOptionalText(record, ["certifications", "certification", "notes", "commentaire"])
+    });
+  });
+
+  return { suppliers, errors };
+}
+
+function parseBeanImport(text) {
+  const records = csvRecords(text);
+  const errors = [];
+  const beans = [];
+
+  records.forEach((record, index) => {
+    const lineNumber = index + 2;
+    const commercialName = csvValue(record, ["grain", "nom_commercial", "article", "cafe", "coffee", "bean"]).trim();
+    const countryName = csvValue(record, ["pays", "country", "origine", "origin"]).trim();
+    const supplierName = csvValue(record, ["fournisseur", "supplier", "importateur"]).trim();
+    const harvestYear = csvOptionalNumber(record, ["recolte", "annee_recolte", "harvest_year"]);
+    const altitudeM = csvOptionalNumber(record, ["altitude_m", "altitude"]);
+    const scaScore = csvOptionalNumber(record, ["score_sca", "sca", "score"]);
+    const moisturePct = csvOptionalNumber(record, ["humidite_pct", "humidite", "moisture_pct"]);
+    const density = csvOptionalNumber(record, ["densite", "density"]);
+    const landedCostPerKg = csvOptionalNumber(record, ["cout_rendu_kg", "cout_rendu", "landed_cost_per_kg", "cost_kg"]);
+    const arrivalDate = csvOptionalText(record, ["date_arrivee", "arrivee", "arrival_date"]);
+
+    if (!commercialName) {
+      errors.push(`Ligne ${lineNumber} : grain manquant`);
+      return;
+    }
+
+    if (!countryName) {
+      errors.push(`Ligne ${lineNumber} : pays manquant`);
+      return;
+    }
+
+    if (!supplierName) {
+      errors.push(`Ligne ${lineNumber} : fournisseur manquant`);
+      return;
+    }
+
+    if (harvestYear.hasValue && (!Number.isFinite(harvestYear.value) || harvestYear.value < 2000 || harvestYear.value > 2100)) {
+      errors.push(`Ligne ${lineNumber} : récolte invalide`);
+      return;
+    }
+
+    if (arrivalDate && !isIsoDate(arrivalDate)) {
+      errors.push(`Ligne ${lineNumber} : date d'arrivée invalide`);
+      return;
+    }
+
+    if (altitudeM.hasValue && (!Number.isFinite(altitudeM.value) || altitudeM.value < 0)) {
+      errors.push(`Ligne ${lineNumber} : altitude invalide`);
+      return;
+    }
+
+    if (scaScore.hasValue && (!Number.isFinite(scaScore.value) || scaScore.value < 0 || scaScore.value > 100)) {
+      errors.push(`Ligne ${lineNumber} : score SCA invalide`);
+      return;
+    }
+
+    if (moisturePct.hasValue && (!Number.isFinite(moisturePct.value) || moisturePct.value < 0 || moisturePct.value > 100)) {
+      errors.push(`Ligne ${lineNumber} : humidité invalide`);
+      return;
+    }
+
+    if (density.hasValue && (!Number.isFinite(density.value) || density.value < 0)) {
+      errors.push(`Ligne ${lineNumber} : densité invalide`);
+      return;
+    }
+
+    if (landedCostPerKg.hasValue && (!Number.isFinite(landedCostPerKg.value) || landedCostPerKg.value < 0)) {
+      errors.push(`Ligne ${lineNumber} : coût rendu invalide`);
+      return;
+    }
+
+    beans.push({
+      commercialName,
+      countryName,
+      countryRegion: csvOptionalText(record, ["region_monde", "region_du_monde", "zone", "continent"]),
+      supplierName,
+      supplierCurrency: (csvValue(record, ["devise", "currency"]) || "EUR").trim().toUpperCase(),
+      species: csvOptionalText(record, ["type", "espece", "species"]),
+      process: csvOptionalText(record, ["process", "processus", "traitement"]),
+      originRegion: csvOptionalText(record, ["region_origine", "region_productrice", "region"]),
+      variety: csvOptionalText(record, ["variete", "variety"]),
+      harvestYear: harvestYear.hasValue ? Number(harvestYear.value.toFixed(0)) : undefined,
+      container: csvOptionalText(record, ["container", "conteneur", "lot"]),
+      arrivalDate,
+      altitudeM: altitudeM.hasValue ? Number(altitudeM.value.toFixed(0)) : undefined,
+      scaScore: scaScore.hasValue ? Number(scaScore.value.toFixed(1)) : undefined,
+      moisturePct: moisturePct.hasValue ? Number(moisturePct.value.toFixed(1)) : undefined,
+      density: density.hasValue ? Number(density.value.toFixed(1)) : undefined,
+      screenSize: csvOptionalText(record, ["calibre", "screen_size"]),
+      landedCostPerKg: landedCostPerKg.hasValue ? Number(landedCostPerKg.value.toFixed(4)) : undefined,
+      location: csvOptionalText(record, ["emplacement", "location"]),
+      qualityNotes: csvOptionalText(record, ["notes_qualite", "analyses", "analyse", "note", "notes", "commentaire"])
+    });
+  });
+
+  return { beans, errors };
+}
+
 function resolveImportBean(record, lineNumber, errors, supplier, landedCostPerKg) {
   const grainName = csvValue(record, ["grain", "article", "cafe", "coffee", "bean"]);
   if (!grainName) {
@@ -3860,6 +4018,161 @@ function setImportStatus(element, message, status = "muted") {
   element.className = `import-status ${status}`;
 }
 
+function importErrorSuffix(errors) {
+  if (errors.length === 0) return "";
+  const preview = errors.slice(0, 2).join(" | ");
+  const more = errors.length > 2 ? "..." : "";
+  return `, ${errors.length} ignorée(s) : ${preview}${more}`;
+}
+
+function upsertSupplierFromImport(row) {
+  const existing = findByName("suppliers", "name", row.name);
+  const payload = {
+    name: row.name,
+    defaultCurrency: row.defaultCurrency || existing?.defaultCurrency || "EUR",
+    averageLeadTimeDays: row.averageLeadTimeDays !== undefined ? row.averageLeadTimeDays : existing?.averageLeadTimeDays ?? null,
+    reliabilityPct: row.reliabilityPct !== undefined ? row.reliabilityPct : existing?.reliabilityPct ?? null,
+    incoterms: row.incoterms !== undefined ? row.incoterms : existing?.incoterms || "",
+    paymentTerms: row.paymentTerms !== undefined ? row.paymentTerms : existing?.paymentTerms || "",
+    certifications: row.certifications !== undefined ? row.certifications : existing?.certifications || ""
+  };
+
+  if (existing) {
+    Object.assign(existing, payload);
+    return "updated";
+  }
+
+  state.suppliers.push({
+    id: createId("supplier", row.name),
+    ...payload
+  });
+  return "inserted";
+}
+
+function upsertBeanFromImport(row) {
+  const supplier = ensureSupplier(row.supplierName, row.supplierCurrency || "EUR");
+  const country = ensureCountry(row.countryName, row.countryRegion || "");
+  const existing = findByName("beans", "commercialName", row.commercialName);
+  const payload = {
+    commercialName: row.commercialName,
+    countryId: country.id,
+    defaultSupplierId: supplier.id,
+    species: row.species !== undefined ? row.species : existing?.species || "arabica",
+    process: row.process !== undefined ? row.process : existing?.process || "",
+    region: row.originRegion !== undefined ? row.originRegion : existing?.region || "",
+    variety: row.variety !== undefined ? row.variety : existing?.variety || "",
+    harvestYear: row.harvestYear !== undefined ? row.harvestYear : existing?.harvestYear ?? null,
+    container: row.container !== undefined ? row.container : existing?.container || "",
+    arrivalDate: row.arrivalDate !== undefined ? row.arrivalDate : existing?.arrivalDate || "",
+    altitudeM: row.altitudeM !== undefined ? row.altitudeM : existing?.altitudeM ?? null,
+    scaScore: row.scaScore !== undefined ? row.scaScore : existing?.scaScore ?? null,
+    moisturePct: row.moisturePct !== undefined ? row.moisturePct : existing?.moisturePct ?? null,
+    density: row.density !== undefined ? row.density : existing?.density ?? null,
+    screenSize: row.screenSize !== undefined ? row.screenSize : existing?.screenSize || "",
+    landedCostPerKg: row.landedCostPerKg !== undefined ? row.landedCostPerKg : existing?.landedCostPerKg ?? null,
+    location: row.location !== undefined ? row.location : existing?.location || "",
+    qualityNotes: row.qualityNotes !== undefined ? row.qualityNotes : existing?.qualityNotes || ""
+  };
+
+  if (existing) {
+    Object.assign(existing, payload);
+    if (!state.greenStocks.some((stock) => stock.beanId === existing.id)) {
+      state.greenStocks.push({ beanId: existing.id, quantityKg: 0, incomingKg: 0, eta: "" });
+    }
+    return "updated";
+  }
+
+  const bean = {
+    id: createId("bean", row.commercialName),
+    ...payload
+  };
+  state.beans.push(bean);
+  state.greenStocks.push({ beanId: bean.id, quantityKg: 0, incomingKg: 0, eta: "" });
+  return "inserted";
+}
+
+function sortImportedReferences() {
+  state.countries.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  state.suppliers.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  state.beans.sort((a, b) => a.commercialName.localeCompare(b.commercialName, "fr"));
+}
+
+function downloadSupplierTemplate() {
+  const sampleSupplier = state.suppliers[0];
+  const rows = [
+    {
+      fournisseur: sampleSupplier?.name || "Importateur A",
+      devise: sampleSupplier?.defaultCurrency || "EUR",
+      delai_moyen_jours: sampleSupplier?.averageLeadTimeDays || "28",
+      fiabilite_pct: sampleSupplier?.reliabilityPct || "94",
+      incoterms: sampleSupplier?.incoterms || "CIF",
+      paiement: sampleSupplier?.paymentTerms || "30 jours",
+      certifications: sampleSupplier?.certifications || "Bio, Rainforest..."
+    }
+  ];
+
+  downloadCsv(`modele-fournisseurs-${today}.csv`, [
+    { key: "fournisseur", label: "fournisseur" },
+    { key: "devise", label: "devise" },
+    { key: "delai_moyen_jours", label: "delai_moyen_jours" },
+    { key: "fiabilite_pct", label: "fiabilite_pct" },
+    { key: "incoterms", label: "incoterms" },
+    { key: "paiement", label: "paiement" },
+    { key: "certifications", label: "certifications" }
+  ], rows);
+}
+
+function downloadBeanTemplate() {
+  const sampleBean = state.beans[0];
+  const sampleCountry = getById("countries", sampleBean?.countryId);
+  const sampleSupplier = getById("suppliers", sampleBean?.defaultSupplierId);
+  const rows = [
+    {
+      grain: sampleBean?.commercialName || "Brésil Santos",
+      pays: sampleCountry?.name || "Brésil",
+      region_monde: sampleCountry?.region || "Amérique latine",
+      fournisseur: sampleSupplier?.name || "Importateur A",
+      type: sampleBean?.species || "arabica",
+      process: sampleBean?.process || "naturel",
+      region_origine: sampleBean?.region || "Santos",
+      variete: sampleBean?.variety || "Mundo Novo",
+      recolte: sampleBean?.harvestYear || "2026",
+      container: sampleBean?.container || "BR-ABC123",
+      date_arrivee: sampleBean?.arrivalDate || today,
+      altitude_m: sampleBean?.altitudeM || "950",
+      score_sca: sampleBean?.scaScore || "82.5",
+      humidite_pct: sampleBean?.moisturePct || "10.8",
+      densite: sampleBean?.density || "690",
+      calibre: sampleBean?.screenSize || "17/18",
+      cout_rendu_kg: sampleBean?.landedCostPerKg || "5.95",
+      emplacement: sampleBean?.location || "Dépôt A - Rack 1",
+      notes_qualite: sampleBean?.qualityNotes || "Profil chocolat/noisette"
+    }
+  ];
+
+  downloadCsv(`modele-grains-${today}.csv`, [
+    { key: "grain", label: "grain" },
+    { key: "pays", label: "pays" },
+    { key: "region_monde", label: "region_monde" },
+    { key: "fournisseur", label: "fournisseur" },
+    { key: "type", label: "type" },
+    { key: "process", label: "process" },
+    { key: "region_origine", label: "region_origine" },
+    { key: "variete", label: "variete" },
+    { key: "recolte", label: "recolte" },
+    { key: "container", label: "container" },
+    { key: "date_arrivee", label: "date_arrivee" },
+    { key: "altitude_m", label: "altitude_m" },
+    { key: "score_sca", label: "score_sca" },
+    { key: "humidite_pct", label: "humidite_pct" },
+    { key: "densite", label: "densite" },
+    { key: "calibre", label: "calibre" },
+    { key: "cout_rendu_kg", label: "cout_rendu_kg" },
+    { key: "emplacement", label: "emplacement" },
+    { key: "notes_qualite", label: "notes_qualite" }
+  ], rows);
+}
+
 function downloadHistoryTemplate() {
   const sampleBlend = state.blends[0]?.name || "Espresso Maison";
   const rows = [
@@ -3933,6 +4246,84 @@ function downloadStockTemplate() {
     { key: "eta", label: "eta" },
     { key: "note", label: "note" }
   ], rows);
+}
+
+async function importSuppliers(event) {
+  event.preventDefault();
+
+  const file = els.supplierImportFile.files[0];
+  if (!file) return;
+
+  try {
+    const text = await readFileAsText(file);
+    const { suppliers, errors } = parseSupplierImport(text);
+
+    if (suppliers.length === 0) {
+      setImportStatus(els.supplierImportStatus, errors[0] || "Aucune ligne importable.", "warning");
+      return;
+    }
+
+    let inserted = 0;
+    let updated = 0;
+
+    suppliers.forEach((supplier) => {
+      const result = upsertSupplierFromImport(supplier);
+      if (result === "inserted") inserted += 1;
+      if (result === "updated") updated += 1;
+    });
+
+    sortImportedReferences();
+    await saveState();
+    els.supplierImportForm.reset();
+    renderAll();
+
+    setImportStatus(
+      els.supplierImportStatus,
+      `${inserted} ajouté(s), ${updated} mis à jour${importErrorSuffix(errors)}.`,
+      errors.length ? "warning" : "success"
+    );
+  } catch {
+    setImportStatus(els.supplierImportStatus, "Import impossible.", "warning");
+  }
+}
+
+async function importBeans(event) {
+  event.preventDefault();
+
+  const file = els.beanImportFile.files[0];
+  if (!file) return;
+
+  try {
+    const text = await readFileAsText(file);
+    const { beans, errors } = parseBeanImport(text);
+
+    if (beans.length === 0) {
+      setImportStatus(els.beanImportStatus, errors[0] || "Aucune ligne importable.", "warning");
+      return;
+    }
+
+    let inserted = 0;
+    let updated = 0;
+
+    beans.forEach((bean) => {
+      const result = upsertBeanFromImport(bean);
+      if (result === "inserted") inserted += 1;
+      if (result === "updated") updated += 1;
+    });
+
+    sortImportedReferences();
+    await saveState();
+    els.beanImportForm.reset();
+    renderAll();
+
+    setImportStatus(
+      els.beanImportStatus,
+      `${inserted} ajouté(s), ${updated} mis à jour${importErrorSuffix(errors)}.`,
+      errors.length ? "warning" : "success"
+    );
+  } catch {
+    setImportStatus(els.beanImportStatus, "Import impossible.", "warning");
+  }
 }
 
 async function importHistoricalOrders(event) {
@@ -4215,6 +4606,10 @@ els.forecastForm.addEventListener("submit", runForecast);
 els.batchForm.addEventListener("submit", addBatch);
 els.exportData.addEventListener("click", exportData);
 els.exportCsvButtons.forEach((button) => button.addEventListener("click", exportCsv));
+els.supplierImportForm.addEventListener("submit", importSuppliers);
+els.downloadSupplierTemplate.addEventListener("click", downloadSupplierTemplate);
+els.beanImportForm.addEventListener("submit", importBeans);
+els.downloadBeanTemplate.addEventListener("click", downloadBeanTemplate);
 els.historyImportForm.addEventListener("submit", importHistoricalOrders);
 els.downloadHistoryTemplate.addEventListener("click", downloadHistoryTemplate);
 els.priceImportForm.addEventListener("submit", importPrices);

@@ -803,6 +803,36 @@
 
               <section class="panel">
                 <div class="panel-heading">
+                  <h2>Import fournisseurs</h2>
+                </div>
+                <form class="form-grid compact" id="supplierImportForm">
+                  <label class="wide">
+                    Fichier CSV
+                    <input id="supplierImportFile" type="file" accept=".csv,text/csv" required />
+                  </label>
+                  <button class="secondary align-end" id="downloadSupplierTemplate" type="button">Modèle CSV</button>
+                  <button class="primary align-end" type="submit">Importer</button>
+                </form>
+                <p class="import-status muted" id="supplierImportStatus" aria-live="polite"></p>
+              </section>
+
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Import grains</h2>
+                </div>
+                <form class="form-grid compact" id="beanImportForm">
+                  <label class="wide">
+                    Fichier CSV
+                    <input id="beanImportFile" type="file" accept=".csv,text/csv" required />
+                  </label>
+                  <button class="secondary align-end" id="downloadBeanTemplate" type="button">Modèle CSV</button>
+                  <button class="primary align-end" type="submit">Importer</button>
+                </form>
+                <p class="import-status muted" id="beanImportStatus" aria-live="polite"></p>
+              </section>
+
+              <section class="panel">
+                <div class="panel-heading">
                   <h2>Import activité N-1</h2>
                 </div>
                 <form class="form-grid compact" id="historyImportForm">
