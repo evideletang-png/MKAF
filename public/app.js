@@ -1269,6 +1269,85 @@ function purchaseRiskClass(risk) {
   return "";
 }
 
+function purchaseActionClass(action) {
+  if (action === "Urgent") return "urgent";
+  if (action === "À commander") return "a-commander";
+  if (action === "Surveiller") return "surveiller";
+  if (action === "À qualifier") return "a-qualifier";
+  return "attendre";
+}
+
+function purchaseActionRank(action) {
+  const ranks = {
+    Urgent: 0,
+    "À commander": 1,
+    "À qualifier": 2,
+    Surveiller: 3,
+    Attendre: 4
+  };
+  return ranks[action] ?? 5;
+}
+
+function buildPurchaseAction(row, settings) {
+  if (!row.bean || !row.supplier) {
+    return {
+      action: "À qualifier",
+      reason: "Grain ou fournisseur par défaut manquant."
+    };
+  }
+
+  if (row.orderKg <= 0) {
+    if (row.incomingKg > 0 && row.eta && row.depletionDate && row.eta > row.depletionDate) {
+      return {
+        action: "Surveiller",
+        reason: `ETA ${row.eta} après épuisement estimé ${row.depletionDate}.`
+      };
+    }
+
+    return {
+      action: "Attendre",
+      reason: "Stock et commandes couvrent le besoin prévu."
+    };
+  }
+
+  if (!row.orderByDate || !Number.isFinite(row.stockCoverageDays)) {
+    return {
+      action: "À qualifier",
+      reason: "Stock ou consommation moyenne insuffisamment qualifiés."
+    };
+  }
+
+  if (row.orderByDate <= settings.startDate) {
+    return {
+      action: "Urgent",
+      reason: `Commander maintenant : autonomie ${formatDays(row.stockCoverageDays)}, délai ${row.leadTimeDays} j.`
+    };
+  }
+
+  if (row.orderByDate <= addDays(settings.startDate, 7)) {
+    return {
+      action: "À commander",
+      reason: `Date limite ${row.orderByDate}, délai fournisseur ${row.leadTimeDays} j.`
+    };
+  }
+
+  return {
+    action: "Surveiller",
+    reason: `Préparer avant le ${row.orderByDate}.`
+  };
+}
+
+function comparePurchasePlanRows(left, right) {
+  const rankDelta = purchaseActionRank(left.action) - purchaseActionRank(right.action);
+  if (rankDelta !== 0) return rankDelta;
+
+  const leftDate = left.orderByDate || "9999-12-31";
+  const rightDate = right.orderByDate || "9999-12-31";
+  if (leftDate !== rightDate) return leftDate.localeCompare(rightDate);
+
+  return Number(right.orderKg || 0) - Number(left.orderKg || 0);
+}
+
 function buildPurchasePlanRow(need, settings, horizonDays) {
   const bean = need.bean;
   const supplier = getById("suppliers", bean?.defaultSupplierId);
@@ -1281,8 +1360,7 @@ function buildPurchasePlanRow(need, settings, horizonDays) {
   const price = purchaseUnitPrice(bean, supplier?.id, settings.startDate);
   const estimatedCost = Number.isFinite(price.unitCost) ? need.orderKg * price.unitCost : null;
   const risk = purchaseRisk(need.orderKg, stockCoverageDays, leadTimeDays);
-
-  return {
+  const row = {
     ...need,
     supplier,
     leadTimeDays,
@@ -1294,6 +1372,13 @@ function buildPurchasePlanRow(need, settings, horizonDays) {
     currency: price.currency,
     estimatedCost,
     risk
+  };
+  const decision = buildPurchaseAction(row, settings);
+
+  return {
+    ...row,
+    action: decision.action,
+    actionReason: decision.reason
   };
 }
 
@@ -1381,7 +1466,9 @@ function calculateForecast(settings = state.forecastSettings) {
       orderKg: Math.max(0, requiredWithSafetyKg - stockKg - incomingKg)
     };
   });
-  const purchasePlan = beanNeeds.map((need) => buildPurchasePlanRow(need, safeSettings, horizonDays));
+  const purchasePlan = beanNeeds
+    .map((need) => buildPurchasePlanRow(need, safeSettings, horizonDays))
+    .sort(comparePurchasePlanRows);
 
   const totalForecastRoastedKg = dailyRows.reduce((sum, row) => sum + row.forecastKg, 0);
   const totalGreenRequiredKg = beanNeeds.reduce((sum, row) => sum + row.requiredKg, 0);
@@ -2243,6 +2330,8 @@ function renderPurchasePlanTable(rows) {
         <tr>
           <th>Grain</th>
           <th>Fournisseur</th>
+          <th>Action</th>
+          <th>Pourquoi</th>
           <th class="numeric">Stock</th>
           <th class="numeric">En cours</th>
           <th class="numeric">Besoin prévu</th>
@@ -2256,11 +2345,14 @@ function renderPurchasePlanTable(rows) {
         ${rows
           .map(
             (row) => {
+              const actionClass = purchaseActionClass(row.action);
               const riskClass = purchaseRiskClass(row.risk);
               return `
                 <tr>
                   <td>${escapeHtml(row.bean?.commercialName || "-")}</td>
                   <td>${escapeHtml(row.supplier?.name || "-")}</td>
+                  <td><span class="status-pill ${escapeHtml(actionClass)}">${escapeHtml(row.action)}</span></td>
+                  <td>${escapeHtml(row.actionReason || "-")}</td>
                   <td class="numeric">${escapeHtml(formatKg(row.stockKg))}</td>
                   <td class="numeric">${escapeHtml(formatKg(row.incomingKg))}</td>
                   <td class="numeric">${escapeHtml(formatKg(row.requiredWithSafetyKg))}</td>
@@ -3810,6 +3902,8 @@ function purchasePlanRowsForCsv(forecast = calculateForecast(state.forecastSetti
   return forecast.purchasePlan.map((row) => ({
     grain: row.bean?.commercialName || "",
     fournisseur: row.supplier?.name || "",
+    action: row.action,
+    raison_action: row.actionReason,
     stock_kg: row.stockKg,
     commande_en_cours_kg: row.incomingKg,
     besoin_prevu_kg: row.requiredWithSafetyKg,
@@ -3827,6 +3921,8 @@ function exportPurchasePlanCsv() {
   downloadCsv(`mkaf-plan-achat-${today}.csv`, [
     { key: "grain", label: "grain" },
     { key: "fournisseur", label: "fournisseur" },
+    { key: "action", label: "action" },
+    { key: "raison_action", label: "raison_action" },
     { key: "stock_kg", label: "stock_kg" },
     { key: "commande_en_cours_kg", label: "commande_en_cours_kg" },
     { key: "besoin_prevu_kg", label: "besoin_prevu_kg" },
