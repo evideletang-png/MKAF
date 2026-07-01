@@ -1533,6 +1533,47 @@ function dateRangesOverlap(left, right) {
   return left.validFrom <= rightTo && right.validFrom <= leftTo;
 }
 
+function pricePeriodLabel(price) {
+  return `${price.validFrom} -> ${price.validTo || "ouvert"}`;
+}
+
+function priceScopeLabel(price) {
+  const bean = getById("beans", price.beanId);
+  const supplier = getById("suppliers", price.supplierId);
+  return `${bean?.commercialName || "Grain"} / ${supplier?.name || "fournisseur"}`;
+}
+
+function splitPriceOverlaps(candidate) {
+  const overlaps = state.prices.filter((price) => {
+    return (
+      price.id !== candidate.id &&
+      price.beanId === candidate.beanId &&
+      price.supplierId === candidate.supplierId &&
+      dateRangesOverlap(price, candidate)
+    );
+  });
+
+  return {
+    closable: overlaps.filter((price) => !price.validTo && price.validFrom < candidate.validFrom),
+    blocking: overlaps.filter((price) => price.validTo || price.validFrom >= candidate.validFrom)
+  };
+}
+
+function closePreviousOpenPrices(prices, nextValidFrom) {
+  const closedDate = addDays(nextValidFrom, -1);
+  prices.forEach((price) => {
+    price.validTo = closedDate;
+  });
+}
+
+function priceOverlapMessage(candidate, conflicts) {
+  const periods = conflicts
+    .slice(0, 3)
+    .map(pricePeriodLabel)
+    .join(", ");
+  return `Tarif déjà actif pour ${priceScopeLabel(candidate)} : ${periods}. Ajuste la période avant d'enregistrer.`;
+}
+
 function calculateDataQualityIssues() {
   const issues = [];
   const countryIds = new Set(state.countries.map((country) => country.id));
@@ -3292,6 +3333,7 @@ async function addHistoricalOrder(event) {
 async function addQuickPurchase(event) {
   event.preventDefault();
 
+  const snapshot = createBusinessSnapshot();
   const category = els.quickPurchaseCategory.value;
   const isGreenCoffee = category === "greenCoffee";
   const date = els.quickPurchaseDate.value;
@@ -3357,6 +3399,16 @@ async function addQuickPurchase(event) {
   const country = ensureCountry(countryName);
   const bean = ensureBean(itemLabel, country.id, supplier.id, unitCost);
 
+  const candidatePrice = {
+    id: `price-${crypto.randomUUID()}`,
+    beanId: bean.id,
+    supplierId: supplier.id,
+    pricePerKg: unitCost,
+    currency: els.quickPurchaseCurrency.value,
+    validFrom: date,
+    validTo,
+    notes
+  };
   const existingPrice = state.prices.find((price) => {
     return (
       price.beanId === bean.id &&
@@ -3371,16 +3423,14 @@ async function addQuickPurchase(event) {
     existingPrice.currency = els.quickPurchaseCurrency.value;
     existingPrice.notes = notes;
   } else {
-    state.prices.unshift({
-      id: `price-${crypto.randomUUID()}`,
-      beanId: bean.id,
-      supplierId: supplier.id,
-      pricePerKg: unitCost,
-      currency: els.quickPurchaseCurrency.value,
-      validFrom: date,
-      validTo,
-      notes
-    });
+    const { closable, blocking } = splitPriceOverlaps(candidatePrice);
+    if (blocking.length > 0) {
+      restoreBusinessSnapshot(snapshot);
+      window.alert(priceOverlapMessage(candidatePrice, blocking));
+      return;
+    }
+    closePreviousOpenPrices(closable, candidatePrice.validFrom);
+    state.prices.unshift(candidatePrice);
   }
 
   if (["ordered", "received"].includes(status)) {
@@ -3435,6 +3485,13 @@ async function addPrice(event) {
     window.alert("La date de fin doit être après la date de début.");
     return;
   }
+
+  const { closable, blocking } = splitPriceOverlaps(price);
+  if (blocking.length > 0) {
+    window.alert(priceOverlapMessage(price, blocking));
+    return;
+  }
+  closePreviousOpenPrices(closable, price.validFrom);
 
   state.prices.unshift(price);
   await saveState();
@@ -4685,6 +4742,12 @@ async function importPrices(event) {
         existing.notes = price.notes;
         updated += 1;
       } else {
+        const { closable, blocking } = splitPriceOverlaps(price);
+        if (blocking.length > 0) {
+          errors.push(`${priceScopeLabel(price)} ignoré : chevauchement avec ${blocking.slice(0, 2).map(pricePeriodLabel).join(", ")}.`);
+          return;
+        }
+        closePreviousOpenPrices(closable, price.validFrom);
         state.prices.unshift(price);
         inserted += 1;
       }
