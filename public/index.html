@@ -288,92 +288,105 @@
         </section>
 
         <section class="view" id="data">
-          <div class="section-grid">
-            <section class="panel">
-              <div class="panel-heading">
-                <h2>Pays producteurs</h2>
-              </div>
-              <form class="form-grid compact" id="countryForm">
-                <label>
-                  Pays
-                  <input id="countryName" type="text" placeholder="Brésil" required />
-                </label>
-                <label>
-                  Région
-                  <input id="countryRegion" type="text" placeholder="Amérique latine" />
-                </label>
-                <button class="primary align-end" type="submit">Ajouter</button>
-              </form>
-              <div class="table-wrap spaced">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Pays</th>
-                      <th>Région</th>
-                    </tr>
-                  </thead>
-                  <tbody id="countryRows"></tbody>
-                </table>
-              </div>
-            </section>
+          <div class="sub-tabs" aria-label="Sections de données" role="tablist">
+            <button class="sub-tab active" data-data-section="references" type="button" role="tab" aria-selected="true">Référentiels</button>
+            <button class="sub-tab" data-data-section="beans" type="button" role="tab" aria-selected="false">Grains</button>
+            <button class="sub-tab" data-data-section="blends" type="button" role="tab" aria-selected="false">Assemblages</button>
+            <button class="sub-tab" data-data-section="stocks" type="button" role="tab" aria-selected="false">Stocks</button>
+            <button class="sub-tab" data-data-section="history" type="button" role="tab" aria-selected="false">Activité N-1</button>
+          </div>
 
-            <section class="panel">
-              <div class="panel-heading">
-                <h2>Fournisseurs</h2>
-              </div>
-              <form class="form-grid" id="supplierForm">
-                <label>
-                  Nom
-                  <input id="supplierName" type="text" placeholder="Importateur, coopérative..." required />
-                </label>
-                <label>
-                  Devise
-                  <select id="supplierCurrency" required>
-                    <option>EUR</option>
-                    <option>USD</option>
-                  </select>
-                </label>
-                <label>
-                  Délai moyen jours
-                  <input id="supplierLeadTime" inputmode="numeric" min="0" step="1" type="number" />
-                </label>
-                <label>
-                  Fiabilité %
-                  <input id="supplierReliability" inputmode="decimal" min="0" max="100" step="1" type="number" />
-                </label>
-                <label>
-                  Incoterms
-                  <input id="supplierIncoterms" type="text" placeholder="EXW, FOB, CIF..." />
-                </label>
-                <label>
-                  Paiement
-                  <input id="supplierPaymentTerms" type="text" placeholder="30 jours, acompte..." />
-                </label>
-                <label class="wide">
-                  Certifications / notes
-                  <input id="supplierCertifications" type="text" placeholder="Bio, Fairtrade, Rainforest, remarques..." />
-                </label>
-                <button class="primary align-end" type="submit">Ajouter</button>
-              </form>
-              <div class="table-wrap spaced">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Fournisseur</th>
-                      <th>Devise</th>
-                      <th class="numeric">Délai</th>
-                      <th class="numeric">Fiabilité</th>
-                      <th>Incoterms</th>
-                      <th>Paiement</th>
-                      <th class="numeric">SCA moyen</th>
-                    </tr>
-                  </thead>
-                  <tbody id="supplierRows"></tbody>
-                </table>
-              </div>
-            </section>
+          <div class="data-section active" data-data-section-panel="references" role="tabpanel">
+            <div class="section-grid">
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Pays producteurs</h2>
+                </div>
+                <form class="form-grid compact" id="countryForm">
+                  <label>
+                    Pays
+                    <input id="countryName" type="text" placeholder="Brésil" required />
+                  </label>
+                  <label>
+                    Région
+                    <input id="countryRegion" type="text" placeholder="Amérique latine" />
+                  </label>
+                  <button class="primary align-end" type="submit">Ajouter</button>
+                </form>
+                <div class="table-wrap spaced">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Pays</th>
+                        <th>Région</th>
+                      </tr>
+                    </thead>
+                    <tbody id="countryRows"></tbody>
+                  </table>
+                </div>
+              </section>
 
-            <section class="panel full-span">
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Fournisseurs</h2>
+                </div>
+                <form class="form-grid" id="supplierForm">
+                  <label>
+                    Nom
+                    <input id="supplierName" type="text" placeholder="Importateur, coopérative..." required />
+                  </label>
+                  <label>
+                    Devise
+                    <select id="supplierCurrency" required>
+                      <option>EUR</option>
+                      <option>USD</option>
+                    </select>
+                  </label>
+                  <label>
+                    Délai moyen jours
+                    <input id="supplierLeadTime" inputmode="numeric" min="0" step="1" type="number" />
+                  </label>
+                  <label>
+                    Fiabilité %
+                    <input id="supplierReliability" inputmode="decimal" min="0" max="100" step="1" type="number" />
+                  </label>
+                  <label>
+                    Incoterms
+                    <input id="supplierIncoterms" type="text" placeholder="EXW, FOB, CIF..." />
+                  </label>
+                  <label>
+                    Paiement
+                    <input id="supplierPaymentTerms" type="text" placeholder="30 jours, acompte..." />
+                  </label>
+                  <label class="wide">
+                    Certifications / notes
+                    <input id="supplierCertifications" type="text" placeholder="Bio, Fairtrade, Rainforest, remarques..." />
+                  </label>
+                  <button class="primary align-end" type="submit">Ajouter</button>
+                </form>
+                <div class="table-wrap spaced">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Fournisseur</th>
+                        <th>Devise</th>
+                        <th class="numeric">Délai</th>
+                        <th class="numeric">Fiabilité</th>
+                        <th>Incoterms</th>
+                        <th>Paiement</th>
+                        <th class="numeric">SCA moyen</th>
+                      </tr>
+                    </thead>
+                    <tbody id="supplierRows"></tbody>
+                  </table>
+                </div>
+              </section>
+
+            </div>
+          </div>
+
+          <div class="data-section" data-data-section-panel="beans" role="tabpanel">
+            <section class="panel">
               <div class="panel-heading">
                 <h2>Grains</h2>
               </div>
@@ -454,8 +467,10 @@
               </form>
               <div id="beanRows" class="table-wrap spaced"></div>
             </section>
+          </div>
 
-            <section class="panel full-span">
+          <div class="data-section" data-data-section-panel="blends" role="tabpanel">
+            <section class="panel">
               <div class="panel-heading">
                 <h2>Assemblages</h2>
               </div>
@@ -503,7 +518,9 @@
               </form>
               <div id="blendRows" class="table-wrap spaced"></div>
             </section>
+          </div>
 
+          <div class="data-section" data-data-section-panel="stocks" role="tabpanel">
             <section class="panel">
               <div class="panel-heading">
                 <h2>Stock café vert</h2>
@@ -544,7 +561,9 @@
                 </table>
               </div>
             </section>
+          </div>
 
+          <div class="data-section" data-data-section-panel="history" role="tabpanel">
             <section class="panel">
               <div class="panel-heading">
                 <h2>Activité N-1</h2>

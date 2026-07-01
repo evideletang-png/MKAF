@@ -109,6 +109,29 @@ button {
   color: #17231f;
 }
 
+.sub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sub-tab {
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.sub-tab:hover,
+.sub-tab.active {
+  border-color: rgba(189, 121, 45, 0.45);
+  background: #fff6e8;
+  color: var(--ink);
+}
+
 .main {
   min-width: 0;
   padding: 28px;
@@ -219,6 +242,14 @@ h3 {
 .view.active {
   display: grid;
   gap: 18px;
+}
+
+.data-section {
+  display: none;
+}
+
+.data-section.active {
+  display: block;
 }
 
 .metric-grid {
@@ -506,8 +537,17 @@ th.numeric {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
+  .sub-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .nav-tab {
     text-align: center;
+  }
+
+  .sub-tab {
+    width: 100%;
   }
 
   .topbar,
@@ -542,6 +582,7 @@ th.numeric {
   }
 
   .nav-tabs,
+  .sub-tabs,
   .metric-grid,
   .form-grid,
   .form-grid.compact,

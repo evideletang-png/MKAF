@@ -3,17 +3,31 @@ const STORAGE_KEY = "cout-cafe-prototype-v1";
 const today = new Date().toISOString().slice(0, 10);
 let storageMode = "browser";
 
+const defaultDataSection = "references";
+
+const dataSectionRoutes = {
+  references: "/donnees",
+  beans: "/donnees/grains",
+  blends: "/donnees/assemblages",
+  stocks: "/donnees/stocks",
+  history: "/donnees/activite-n-1"
+};
+
 const viewRoutes = {
   dashboard: "/",
   prices: "/tarifs",
   calculator: "/calculateur",
   forecast: "/previsions",
   production: "/production",
-  data: "/donnees"
+  data: dataSectionRoutes.references
 };
 
 const routeViews = Object.fromEntries(
   Object.entries(viewRoutes).map(([viewId, route]) => [route, viewId])
+);
+
+const dataRouteSections = Object.fromEntries(
+  Object.entries(dataSectionRoutes).map(([sectionId, route]) => [route, sectionId])
 );
 
 const referenceCountries = [
@@ -279,6 +293,8 @@ let state = structuredClone(seedState);
 
 const els = {
   navTabs: document.querySelectorAll(".nav-tab"),
+  dataTabs: document.querySelectorAll(".sub-tab"),
+  dataSections: document.querySelectorAll(".data-section"),
   views: document.querySelectorAll(".view"),
   storageStatus: document.querySelector("#storageStatus"),
   metrics: document.querySelector("#metrics"),
@@ -1986,16 +2002,52 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
+function normalizePath(pathname) {
+  if (!pathname || pathname === "/") return "/";
+  return pathname.replace(/\/+$/, "") || "/";
+}
+
+function routeToView(pathname) {
+  const normalizedPath = normalizePath(pathname);
+  if (dataRouteSections[normalizedPath]) return "data";
+  return routeViews[normalizedPath] || "dashboard";
+}
+
+function routeToDataSection(pathname) {
+  return dataRouteSections[normalizePath(pathname)] || defaultDataSection;
+}
+
+function activateDataSection(sectionId) {
+  const activeSectionId = dataSectionRoutes[sectionId] ? sectionId : defaultDataSection;
+
+  els.dataTabs.forEach((item) => {
+    const isActive = item.dataset.dataSection === activeSectionId;
+    item.classList.toggle("active", isActive);
+    item.setAttribute("aria-selected", String(isActive));
+  });
+
+  els.dataSections.forEach((section) => {
+    section.classList.toggle("active", section.dataset.dataSectionPanel === activeSectionId);
+  });
+}
+
+function setupDataNavigation() {
+  els.dataTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const sectionId = tab.dataset.dataSection;
+      activateDataSection(sectionId);
+
+      const route = dataSectionRoutes[sectionId] || dataSectionRoutes[defaultDataSection];
+      if (normalizePath(window.location.pathname) !== route) {
+        window.history.pushState({ viewId: "data", dataSection: sectionId }, "", route);
+      }
+    });
+  });
+
+  activateDataSection(routeToDataSection(window.location.pathname));
+}
+
 function setupNavigation() {
-  function normalizePath(pathname) {
-    if (!pathname || pathname === "/") return "/";
-    return pathname.replace(/\/+$/, "") || "/";
-  }
-
-  function routeToView(pathname) {
-    return routeViews[normalizePath(pathname)] || "dashboard";
-  }
-
   function activateView(viewId) {
     els.navTabs.forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
     els.views.forEach((view) => view.classList.toggle("active", view.id === viewId));
@@ -2003,9 +2055,13 @@ function setupNavigation() {
 
   function navigateToView(viewId) {
     activateView(viewId);
+    if (viewId === "data") {
+      activateDataSection(defaultDataSection);
+    }
+
     const route = viewRoutes[viewId] || "/";
     if (normalizePath(window.location.pathname) !== route) {
-      window.history.pushState({ viewId }, "", route);
+      window.history.pushState({ viewId, dataSection: viewId === "data" ? defaultDataSection : undefined }, "", route);
     }
   }
 
@@ -2016,12 +2072,24 @@ function setupNavigation() {
   });
 
   window.addEventListener("popstate", () => {
-    activateView(routeToView(window.location.pathname));
+    const viewId = routeToView(window.location.pathname);
+    activateView(viewId);
+    if (viewId === "data") {
+      activateDataSection(routeToDataSection(window.location.pathname));
+    }
   });
 
-  const initialViewId = routeToView(window.location.pathname);
+  const initialPath = normalizePath(window.location.pathname);
+  const initialViewId = routeToView(initialPath);
   activateView(initialViewId);
-  if (normalizePath(window.location.pathname) !== (viewRoutes[initialViewId] || "/")) {
+
+  if (initialViewId === "data") {
+    activateDataSection(routeToDataSection(initialPath));
+  }
+
+  if (initialViewId === "data" && !dataRouteSections[initialPath]) {
+    window.history.replaceState({ viewId: "data", dataSection: defaultDataSection }, "", dataSectionRoutes[defaultDataSection]);
+  } else if (initialViewId !== "data" && initialPath !== (viewRoutes[initialViewId] || "/")) {
     window.history.replaceState({ viewId: initialViewId }, "", viewRoutes[initialViewId] || "/");
   }
 }
@@ -2042,6 +2110,7 @@ els.exportData.addEventListener("click", exportData);
 
 async function initializeApp() {
   setupNavigation();
+  setupDataNavigation();
   await loadState();
   setupDefaults();
   renderAll();
