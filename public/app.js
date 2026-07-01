@@ -324,7 +324,6 @@ const els = {
   quickPurchaseValidTo: document.querySelector("#quickPurchaseValidTo"),
   quickPurchaseNotes: document.querySelector("#quickPurchaseNotes"),
   quickBeanOptions: document.querySelector("#quickBeanOptions"),
-  quickCountryOptions: document.querySelector("#quickCountryOptions"),
   quickSupplierOptions: document.querySelector("#quickSupplierOptions"),
   supplyRows: document.querySelector("#supplyRows"),
   calculatorForm: document.querySelector("#calculatorForm"),
@@ -445,17 +444,37 @@ function normalizeKey(value) {
 }
 
 function hydrateReferenceData() {
+  let changed = false;
+
+  state.countries = state.countries.map((country) => {
+    const referenceCountry = findReferenceCountry(country.name);
+    if (!referenceCountry) return country;
+
+    if (country.name === referenceCountry.name && country.region === referenceCountry.region) {
+      return country;
+    }
+
+    changed = true;
+    return {
+      ...country,
+      name: referenceCountry.name,
+      region: referenceCountry.region
+    };
+  });
+
   const existingCountries = new Set(state.countries.map((country) => normalizeKey(country.name)));
   const missingCountries = referenceCountries.filter((country) => !existingCountries.has(normalizeKey(country.name)));
 
-  if (missingCountries.length === 0) return false;
+  if (missingCountries.length > 0) {
+    changed = true;
+  }
 
   state.countries = [
     ...state.countries,
     ...missingCountries.map((country) => ({ ...country }))
   ].sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
-  return true;
+  return changed;
 }
 
 function loadBrowserState() {
@@ -604,15 +623,25 @@ function findByName(collection, fieldName, value) {
   return state[collection].find((item) => normalizeKey(item[fieldName]) === key) || null;
 }
 
+function findReferenceCountry(value) {
+  const key = normalizeKey(value);
+  if (!key) return null;
+  return referenceCountries.find((country) => normalizeKey(country.name) === key) || null;
+}
+
 function ensureCountry(name) {
   const cleanName = name.trim();
+  const referenceCountry = findReferenceCountry(cleanName);
   const existing = findByName("countries", "name", cleanName);
-  if (existing) return existing;
+  if (existing) {
+    if (referenceCountry && !existing.region) existing.region = referenceCountry.region;
+    return existing;
+  }
 
   const country = {
-    id: createId("country", cleanName),
-    name: cleanName,
-    region: ""
+    id: referenceCountry?.id || createId("country", cleanName),
+    name: referenceCountry?.name || cleanName,
+    region: referenceCountry?.region || ""
   };
 
   state.countries.push(country);
@@ -1183,6 +1212,9 @@ function emptyState() {
 }
 
 function renderSelects() {
+  const referenceCountryOptions = `<option value="">Choisir un pays</option>${referenceCountries
+    .map((country) => `<option value="${escapeHtml(country.name)}">${escapeHtml(country.name)}</option>`)
+    .join("")}`;
   const beanOptions = state.beans
     .map((bean) => `<option value="${escapeHtml(bean.id)}">${escapeHtml(bean.commercialName)}</option>`)
     .join("");
@@ -1199,15 +1231,13 @@ function renderSelects() {
   const countryOptions = state.countries
     .map((country) => `<option value="${escapeHtml(country.id)}">${escapeHtml(country.name)}</option>`)
     .join("");
-  const countryDatalistOptions = state.countries
-    .map((country) => `<option value="${escapeHtml(country.name)}"></option>`)
-    .join("");
   const blendOptions = state.blends
     .map((blend) => `<option value="${escapeHtml(blend.id)}">${escapeHtml(blend.name)}</option>`)
     .join("");
 
+  els.countryName.innerHTML = referenceCountryOptions;
+  els.quickPurchaseCountry.innerHTML = referenceCountryOptions;
   els.quickBeanOptions.innerHTML = beanDatalistOptions;
-  els.quickCountryOptions.innerHTML = countryDatalistOptions;
   els.quickSupplierOptions.innerHTML = supplierDatalistOptions;
   els.priceBean.innerHTML = beanOptions;
   els.priceSupplier.innerHTML = supplierOptions;
@@ -1222,6 +1252,11 @@ function renderSelects() {
     select.innerHTML = beanOptionsWithBlank;
     if (currentValue) select.value = currentValue;
   });
+}
+
+function syncSelectedCountryRegion() {
+  const referenceCountry = findReferenceCountry(els.countryName.value);
+  els.countryRegion.value = referenceCountry?.region || "";
 }
 
 function renderMetrics() {
@@ -1829,9 +1864,15 @@ function setupDefaults() {
 async function addCountry(event) {
   event.preventDefault();
   const name = els.countryName.value.trim();
-  const region = els.countryRegion.value.trim();
+  const referenceCountry = findReferenceCountry(name);
+  const region = referenceCountry?.region || "";
 
   if (!name) return;
+
+  if (!referenceCountry) {
+    window.alert("Choisis un pays dans la liste.");
+    return;
+  }
 
   const exists = state.countries.some((country) => country.name.toLowerCase() === name.toLowerCase());
   if (exists) {
@@ -1840,13 +1881,14 @@ async function addCountry(event) {
   }
 
   state.countries.push({
-    id: createId("country", name),
-    name,
+    id: referenceCountry.id,
+    name: referenceCountry.name,
     region
   });
 
   await saveState();
   els.countryForm.reset();
+  syncSelectedCountryRegion();
   renderAll();
 }
 
@@ -2378,6 +2420,7 @@ els.addBlendComponent.addEventListener("click", createBlendComponentRow);
 els.blendComponents.addEventListener("click", removeBlendComponentRow);
 els.stockForm.addEventListener("submit", updateStock);
 els.historyForm.addEventListener("submit", addHistoricalOrder);
+els.countryName.addEventListener("change", syncSelectedCountryRegion);
 els.quickPurchaseForm.addEventListener("submit", addQuickPurchase);
 els.priceForm.addEventListener("submit", addPrice);
 els.calculatorForm.addEventListener("submit", runCalculator);

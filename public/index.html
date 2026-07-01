@@ -76,7 +76,7 @@
               </label>
               <label>
                 Pays
-                <input id="quickPurchaseCountry" list="quickCountryOptions" type="text" placeholder="Brésil" required />
+                <select id="quickPurchaseCountry" required></select>
               </label>
               <label>
                 Fournisseur
@@ -116,7 +116,6 @@
               <button class="primary align-end" type="submit">Enregistrer l'appro</button>
             </form>
             <datalist id="quickBeanOptions"></datalist>
-            <datalist id="quickCountryOptions"></datalist>
             <datalist id="quickSupplierOptions"></datalist>
           </section>
 
@@ -387,11 +386,11 @@
                 <form class="form-grid compact" id="countryForm">
                   <label>
                     Pays
-                    <input id="countryName" type="text" placeholder="Brésil" required />
+                    <select id="countryName" required></select>
                   </label>
                   <label>
                     Région
-                    <input id="countryRegion" type="text" placeholder="Amérique latine" />
+                    <input id="countryRegion" type="text" placeholder="Automatique" readonly />
                   </label>
                   <button class="primary align-end" type="submit">Ajouter</button>
                 </form>
