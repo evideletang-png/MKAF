@@ -215,7 +215,10 @@ h3 {
 
 .primary,
 .secondary {
-  min-height: var(--control-height);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-height);
   padding: 10px 14px;
   border-radius: 6px;
   font-weight: 750;
@@ -420,11 +423,12 @@ label {
 input,
 select {
   width: 100%;
-  min-height: var(--control-height);
+  height: var(--control-height);
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #ffffff;
   color: var(--ink);
+  line-height: 1.2;
   padding: 9px 10px;
 }
 

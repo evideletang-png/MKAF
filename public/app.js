@@ -31,28 +31,63 @@ const dataRouteSections = Object.fromEntries(
 );
 
 const referenceCountries = [
-  { id: "country-br", name: "Brésil", region: "Amérique latine" },
-  { id: "country-co", name: "Colombie", region: "Amérique latine" },
-  { id: "country-et", name: "Éthiopie", region: "Afrique" },
-  { id: "country-gt", name: "Guatemala", region: "Amérique latine" },
-  { id: "country-hn", name: "Honduras", region: "Amérique latine" },
-  { id: "country-ni", name: "Nicaragua", region: "Amérique latine" },
-  { id: "country-cr", name: "Costa Rica", region: "Amérique latine" },
-  { id: "country-sv", name: "Salvador", region: "Amérique latine" },
-  { id: "country-mx", name: "Mexique", region: "Amérique latine" },
-  { id: "country-pe", name: "Pérou", region: "Amérique latine" },
+  { id: "country-ao", name: "Angola", region: "Afrique" },
+  { id: "country-bj", name: "Bénin", region: "Afrique" },
   { id: "country-bo", name: "Bolivie", region: "Amérique latine" },
-  { id: "country-ec", name: "Équateur", region: "Amérique latine" },
-  { id: "country-ke", name: "Kenya", region: "Afrique" },
-  { id: "country-rw", name: "Rwanda", region: "Afrique" },
+  { id: "country-br", name: "Brésil", region: "Amérique latine" },
   { id: "country-bi", name: "Burundi", region: "Afrique" },
-  { id: "country-tz", name: "Tanzanie", region: "Afrique" },
-  { id: "country-ug", name: "Ouganda", region: "Afrique" },
+  { id: "country-cm", name: "Cameroun", region: "Afrique" },
+  { id: "country-cn", name: "Chine", region: "Asie-Pacifique" },
+  { id: "country-co", name: "Colombie", region: "Amérique latine" },
+  { id: "country-cg", name: "Congo", region: "Afrique" },
+  { id: "country-cr", name: "Costa Rica", region: "Amérique latine" },
+  { id: "country-ci", name: "Côte d'Ivoire", region: "Afrique" },
+  { id: "country-cu", name: "Cuba", region: "Caraïbes" },
+  { id: "country-sv", name: "Salvador", region: "Amérique latine" },
+  { id: "country-ec", name: "Équateur", region: "Amérique latine" },
+  { id: "country-et", name: "Éthiopie", region: "Afrique" },
+  { id: "country-ga", name: "Gabon", region: "Afrique" },
+  { id: "country-gh", name: "Ghana", region: "Afrique" },
+  { id: "country-gt", name: "Guatemala", region: "Amérique latine" },
+  { id: "country-gn", name: "Guinée", region: "Afrique" },
+  { id: "country-ht", name: "Haïti", region: "Caraïbes" },
+  { id: "country-hn", name: "Honduras", region: "Amérique latine" },
   { id: "country-in", name: "Inde", region: "Asie-Pacifique" },
   { id: "country-id", name: "Indonésie", region: "Asie-Pacifique" },
-  { id: "country-vn", name: "Vietnam", region: "Asie-Pacifique" },
+  { id: "country-jm", name: "Jamaïque", region: "Caraïbes" },
+  { id: "country-ke", name: "Kenya", region: "Afrique" },
+  { id: "country-la", name: "Laos", region: "Asie-Pacifique" },
+  { id: "country-lr", name: "Liberia", region: "Afrique" },
+  { id: "country-mg", name: "Madagascar", region: "Afrique" },
+  { id: "country-mw", name: "Malawi", region: "Afrique" },
+  { id: "country-my", name: "Malaisie", region: "Asie-Pacifique" },
+  { id: "country-mx", name: "Mexique", region: "Amérique latine" },
+  { id: "country-mz", name: "Mozambique", region: "Afrique" },
+  { id: "country-mm", name: "Myanmar", region: "Asie-Pacifique" },
+  { id: "country-np", name: "Népal", region: "Asie-Pacifique" },
+  { id: "country-ni", name: "Nicaragua", region: "Amérique latine" },
+  { id: "country-ng", name: "Nigeria", region: "Afrique" },
+  { id: "country-ug", name: "Ouganda", region: "Afrique" },
+  { id: "country-pa", name: "Panama", region: "Amérique latine" },
   { id: "country-pg", name: "Papouasie-Nouvelle-Guinée", region: "Asie-Pacifique" },
-  { id: "country-pa", name: "Panama", region: "Amérique latine" }
+  { id: "country-py", name: "Paraguay", region: "Amérique latine" },
+  { id: "country-pe", name: "Pérou", region: "Amérique latine" },
+  { id: "country-ph", name: "Philippines", region: "Asie-Pacifique" },
+  { id: "country-cf", name: "République centrafricaine", region: "Afrique" },
+  { id: "country-cd", name: "République démocratique du Congo", region: "Afrique" },
+  { id: "country-do", name: "République dominicaine", region: "Caraïbes" },
+  { id: "country-rw", name: "Rwanda", region: "Afrique" },
+  { id: "country-sl", name: "Sierra Leone", region: "Afrique" },
+  { id: "country-lk", name: "Sri Lanka", region: "Asie-Pacifique" },
+  { id: "country-tz", name: "Tanzanie", region: "Afrique" },
+  { id: "country-th", name: "Thaïlande", region: "Asie-Pacifique" },
+  { id: "country-tl", name: "Timor oriental", region: "Asie-Pacifique" },
+  { id: "country-tg", name: "Togo", region: "Afrique" },
+  { id: "country-ve", name: "Venezuela", region: "Amérique latine" },
+  { id: "country-vn", name: "Vietnam", region: "Asie-Pacifique" },
+  { id: "country-ye", name: "Yémen", region: "Moyen-Orient" },
+  { id: "country-zm", name: "Zambie", region: "Afrique" },
+  { id: "country-zw", name: "Zimbabwe", region: "Afrique" }
 ];
 
 function addDays(date, days) {
@@ -462,17 +497,7 @@ function hydrateReferenceData() {
     };
   });
 
-  const existingCountries = new Set(state.countries.map((country) => normalizeKey(country.name)));
-  const missingCountries = referenceCountries.filter((country) => !existingCountries.has(normalizeKey(country.name)));
-
-  if (missingCountries.length > 0) {
-    changed = true;
-  }
-
-  state.countries = [
-    ...state.countries,
-    ...missingCountries.map((country) => ({ ...country }))
-  ].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  state.countries = state.countries.sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   return changed;
 }
@@ -634,7 +659,10 @@ function ensureCountry(name) {
   const referenceCountry = findReferenceCountry(cleanName);
   const existing = findByName("countries", "name", cleanName);
   if (existing) {
-    if (referenceCountry && !existing.region) existing.region = referenceCountry.region;
+    if (referenceCountry) {
+      existing.name = referenceCountry.name;
+      existing.region = referenceCountry.region;
+    }
     return existing;
   }
 
@@ -1212,9 +1240,17 @@ function emptyState() {
 }
 
 function renderSelects() {
-  const referenceCountryOptions = `<option value="">Choisir un pays</option>${referenceCountries
+  const sortedReferenceCountries = [...referenceCountries].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  const existingCountryKeys = new Set(state.countries.map((country) => normalizeKey(country.name)));
+  const availableReferenceCountries = sortedReferenceCountries.filter((country) => !existingCountryKeys.has(normalizeKey(country.name)));
+  const referenceCountryOptions = `<option value="">Choisir un pays</option>${sortedReferenceCountries
     .map((country) => `<option value="${escapeHtml(country.name)}">${escapeHtml(country.name)}</option>`)
     .join("")}`;
+  const addCountryOptions = availableReferenceCountries.length
+    ? `<option value="">Choisir un pays</option>${availableReferenceCountries
+        .map((country) => `<option value="${escapeHtml(country.name)}">${escapeHtml(country.name)}</option>`)
+        .join("")}`
+    : "<option value=\"\">Tous les pays référencés sont déjà ajoutés</option>";
   const beanOptions = state.beans
     .map((bean) => `<option value="${escapeHtml(bean.id)}">${escapeHtml(bean.commercialName)}</option>`)
     .join("");
@@ -1235,7 +1271,7 @@ function renderSelects() {
     .map((blend) => `<option value="${escapeHtml(blend.id)}">${escapeHtml(blend.name)}</option>`)
     .join("");
 
-  els.countryName.innerHTML = referenceCountryOptions;
+  els.countryName.innerHTML = addCountryOptions;
   els.quickPurchaseCountry.innerHTML = referenceCountryOptions;
   els.quickBeanOptions.innerHTML = beanDatalistOptions;
   els.quickSupplierOptions.innerHTML = supplierDatalistOptions;
