@@ -16,6 +16,31 @@ const routeViews = Object.fromEntries(
   Object.entries(viewRoutes).map(([viewId, route]) => [route, viewId])
 );
 
+const referenceCountries = [
+  { id: "country-br", name: "Brésil", region: "Amérique latine" },
+  { id: "country-co", name: "Colombie", region: "Amérique latine" },
+  { id: "country-et", name: "Éthiopie", region: "Afrique" },
+  { id: "country-gt", name: "Guatemala", region: "Amérique latine" },
+  { id: "country-hn", name: "Honduras", region: "Amérique latine" },
+  { id: "country-ni", name: "Nicaragua", region: "Amérique latine" },
+  { id: "country-cr", name: "Costa Rica", region: "Amérique latine" },
+  { id: "country-sv", name: "Salvador", region: "Amérique latine" },
+  { id: "country-mx", name: "Mexique", region: "Amérique latine" },
+  { id: "country-pe", name: "Pérou", region: "Amérique latine" },
+  { id: "country-bo", name: "Bolivie", region: "Amérique latine" },
+  { id: "country-ec", name: "Équateur", region: "Amérique latine" },
+  { id: "country-ke", name: "Kenya", region: "Afrique" },
+  { id: "country-rw", name: "Rwanda", region: "Afrique" },
+  { id: "country-bi", name: "Burundi", region: "Afrique" },
+  { id: "country-tz", name: "Tanzanie", region: "Afrique" },
+  { id: "country-ug", name: "Ouganda", region: "Afrique" },
+  { id: "country-in", name: "Inde", region: "Asie-Pacifique" },
+  { id: "country-id", name: "Indonésie", region: "Asie-Pacifique" },
+  { id: "country-vn", name: "Vietnam", region: "Asie-Pacifique" },
+  { id: "country-pg", name: "Papouasie-Nouvelle-Guinée", region: "Asie-Pacifique" },
+  { id: "country-pa", name: "Panama", region: "Amérique latine" }
+];
+
 function addDays(date, days) {
   const next = new Date(`${date}T12:00:00Z`);
   next.setUTCDate(next.getUTCDate() + days);
@@ -379,6 +404,28 @@ function normalizeState(candidate) {
   };
 }
 
+function normalizeKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function hydrateReferenceData() {
+  const existingCountries = new Set(state.countries.map((country) => normalizeKey(country.name)));
+  const missingCountries = referenceCountries.filter((country) => !existingCountries.has(normalizeKey(country.name)));
+
+  if (missingCountries.length === 0) return false;
+
+  state.countries = [
+    ...state.countries,
+    ...missingCountries.map((country) => ({ ...country }))
+  ].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
+  return true;
+}
+
 function loadBrowserState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return structuredClone(seedState);
@@ -414,23 +461,28 @@ async function loadState() {
     const payload = await response.json();
     if (payload.storage !== "database") {
       storageMode = "browser";
+      const changed = hydrateReferenceData();
+      if (changed) await saveState();
       setStorageStatus("Mode navigateur", "muted");
       return;
     }
 
     storageMode = "database";
     state = normalizeState(payload.state || browserState);
+    const changed = hydrateReferenceData();
     saveBrowserState();
 
-    if (!payload.state) {
+    if (!payload.state || changed) {
       await saveState();
-      setStorageStatus("Base initialisée", "success");
+      setStorageStatus(changed ? "Référentiels branchés" : "Base initialisée", "success");
       return;
     }
 
     setStorageStatus("Base connectée", "success");
   } catch {
     storageMode = "browser";
+    const changed = hydrateReferenceData();
+    if (changed) await saveState();
     setStorageStatus("Base indisponible", "warning");
   }
 }
