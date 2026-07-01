@@ -98,21 +98,37 @@
                 <input id="quickPurchasePrice" inputmode="decimal" min="0.01" step="0.01" type="number" required />
               </label>
               <label>
+                Quantité
+                <input id="quickPurchaseQuantity" inputmode="decimal" min="0.01" step="0.01" type="number" required />
+              </label>
+              <label>
+                Unité
+                <select id="quickPurchaseUnit" required>
+                  <option value="kg">kg</option>
+                  <option value="bag">sac</option>
+                  <option value="piece">pièce</option>
+                  <option value="kwh">kWh</option>
+                  <option value="pallet">palette</option>
+                  <option value="lot">lot</option>
+                </select>
+              </label>
+              <label>
                 Devise
                 <select id="quickPurchaseCurrency" required>
                   <option>EUR</option>
                   <option>USD</option>
                 </select>
               </label>
-              <label class="green-field">
-                Stock actuel kg
-                <input id="quickPurchaseStock" inputmode="decimal" min="0" step="0.1" type="number" placeholder="Optionnel" />
+              <label>
+                Statut
+                <select id="quickPurchaseStatus" required>
+                  <option value="planned">Prévu</option>
+                  <option value="ordered">Commandé</option>
+                  <option value="received">Reçu</option>
+                  <option value="cancelled">Annulé</option>
+                </select>
               </label>
-              <label class="green-field">
-                Commande en cours kg
-                <input id="quickPurchaseIncoming" inputmode="decimal" min="0" step="0.1" type="number" placeholder="Optionnel" />
-              </label>
-              <label class="green-field">
+              <label>
                 ETA
                 <input id="quickPurchaseEta" type="date" />
               </label>
@@ -165,10 +181,14 @@
                     <th>Type</th>
                     <th>Article</th>
                     <th>Fournisseur</th>
-                    <th class="numeric">Coût</th>
+                    <th class="numeric">Qté</th>
+                    <th class="numeric">Coût unit.</th>
+                    <th class="numeric">Total</th>
+                    <th>Statut</th>
                     <th>Début</th>
                     <th>Fin</th>
                     <th>Note</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="otherSupplyRows"></tbody>
@@ -231,6 +251,7 @@
                     <th>Début</th>
                     <th>Fin</th>
                     <th>Note</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="priceRows"></tbody>
@@ -668,6 +689,28 @@
                     </tr>
                   </thead>
                   <tbody id="stockRows"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel spaced">
+              <div class="panel-heading">
+                <h2>Mouvements de stock</h2>
+                <span class="muted" id="stockMovementRowsCount"></span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Grain</th>
+                      <th>Mouvement</th>
+                      <th class="numeric">Quantité</th>
+                      <th>Fournisseur</th>
+                      <th>Note</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stockMovementRows"></tbody>
                 </table>
               </div>
             </section>

@@ -544,6 +544,13 @@ select:disabled {
   display: none;
 }
 
+.table-action {
+  min-width: 0;
+  padding-right: 10px;
+  padding-left: 10px;
+  font-size: 0.82rem;
+}
+
 .align-end {
   align-self: end;
   justify-self: stretch;

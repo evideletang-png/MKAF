@@ -99,6 +99,28 @@ const supplyCategories = {
   other: "Autre"
 };
 
+const supplyUnits = {
+  kg: "kg",
+  bag: "sac",
+  piece: "pièce",
+  kwh: "kWh",
+  pallet: "palette",
+  lot: "lot"
+};
+
+const supplyStatuses = {
+  planned: "Prévu",
+  ordered: "Commandé",
+  received: "Reçu",
+  cancelled: "Annulé"
+};
+
+const stockMovementTypes = {
+  manual: "Inventaire manuel",
+  ordered: "Commande",
+  received: "Réception"
+};
+
 function addDays(date, days) {
   const next = new Date(`${date}T12:00:00Z`);
   next.setUTCDate(next.getUTCDate() + days);
@@ -322,6 +344,7 @@ const seedState = {
     { beanId: "bean-colombie-excelso", quantityKg: 82, incomingKg: 0, eta: "" },
     { beanId: "bean-ethiopie-sidamo", quantityKg: 54, incomingKg: 0, eta: "" }
   ],
+  stockMovements: [],
   historicalOrders: buildHistoricalOrders(),
   forecastSettings: {
     startDate: "2026-07-01",
@@ -363,9 +386,10 @@ const els = {
   quickPurchaseCountry: document.querySelector("#quickPurchaseCountry"),
   quickPurchaseSupplier: document.querySelector("#quickPurchaseSupplier"),
   quickPurchasePrice: document.querySelector("#quickPurchasePrice"),
+  quickPurchaseQuantity: document.querySelector("#quickPurchaseQuantity"),
+  quickPurchaseUnit: document.querySelector("#quickPurchaseUnit"),
   quickPurchaseCurrency: document.querySelector("#quickPurchaseCurrency"),
-  quickPurchaseStock: document.querySelector("#quickPurchaseStock"),
-  quickPurchaseIncoming: document.querySelector("#quickPurchaseIncoming"),
+  quickPurchaseStatus: document.querySelector("#quickPurchaseStatus"),
   quickPurchaseEta: document.querySelector("#quickPurchaseEta"),
   quickPurchaseValidTo: document.querySelector("#quickPurchaseValidTo"),
   quickPurchaseNotes: document.querySelector("#quickPurchaseNotes"),
@@ -451,6 +475,8 @@ const els = {
   stockIncoming: document.querySelector("#stockIncoming"),
   stockEta: document.querySelector("#stockEta"),
   stockRows: document.querySelector("#stockRows"),
+  stockMovementRows: document.querySelector("#stockMovementRows"),
+  stockMovementRowsCount: document.querySelector("#stockMovementRowsCount"),
   historyForm: document.querySelector("#historyForm"),
   historyDate: document.querySelector("#historyDate"),
   historyBlend: document.querySelector("#historyBlend"),
@@ -476,6 +502,7 @@ function normalizeState(candidate) {
     blends: Array.isArray(candidate.blends) ? candidate.blends : base.blends,
     batches: Array.isArray(candidate.batches) ? candidate.batches : base.batches,
     greenStocks: Array.isArray(candidate.greenStocks) ? candidate.greenStocks : base.greenStocks,
+    stockMovements: Array.isArray(candidate.stockMovements) ? candidate.stockMovements : base.stockMovements,
     historicalOrders: Array.isArray(candidate.historicalOrders) ? candidate.historicalOrders : base.historicalOrders,
     forecastSettings: {
       ...base.forecastSettings,
@@ -614,6 +641,12 @@ function formatPct(value) {
 function formatKg(value) {
   if (!Number.isFinite(value)) return "-";
   return `${value.toFixed(1).replace(".", ",")} kg`;
+}
+
+function formatQuantity(value, unit = "kg") {
+  if (!Number.isFinite(value)) return "-";
+  const unitLabel = supplyUnits[unit] || unit || "";
+  return `${value.toFixed(2).replace(/\.?0+$/, "").replace(".", ",")} ${unitLabel}`.trim();
 }
 
 function toFiniteNumber(value) {
@@ -813,6 +846,36 @@ function upsertStockSnapshot(beanId, quantityKg, incomingKg, eta) {
 
   state.greenStocks.push(stock);
   return stock;
+}
+
+function addStockMovement({ beanId, type, date, quantity, unit, supplierId = "", unitCost = null, currency = "EUR", eta = "", notes = "" }) {
+  const movement = {
+    id: `movement-${crypto.randomUUID()}`,
+    beanId,
+    type,
+    date,
+    quantity,
+    unit,
+    supplierId,
+    unitCost,
+    currency,
+    eta,
+    notes
+  };
+
+  state.stockMovements.unshift(movement);
+
+  if (unit === "kg" && type === "received") {
+    const stock = getStock(beanId);
+    upsertStockSnapshot(beanId, Number(stock.quantityKg || 0) + quantity, Number(stock.incomingKg || 0), eta);
+  }
+
+  if (unit === "kg" && type === "ordered") {
+    const stock = getStock(beanId);
+    upsertStockSnapshot(beanId, Number(stock.quantityKg || 0), Number(stock.incomingKg || 0) + quantity, eta);
+  }
+
+  return movement;
 }
 
 function getLatestPrice(beanId) {
@@ -1313,15 +1376,11 @@ function syncQuickPurchaseCategory() {
   const isGreenCoffee = els.quickPurchaseCategory.value === "greenCoffee";
   els.quickPurchaseCountry.disabled = !isGreenCoffee;
   els.quickPurchaseCountry.required = isGreenCoffee;
-  els.quickPurchaseStock.disabled = !isGreenCoffee;
-  els.quickPurchaseIncoming.disabled = !isGreenCoffee;
-  els.quickPurchaseEta.disabled = !isGreenCoffee;
 
   if (!isGreenCoffee) {
     els.quickPurchaseCountry.value = "";
-    els.quickPurchaseStock.value = "";
-    els.quickPurchaseIncoming.value = "";
-    els.quickPurchaseEta.value = "";
+  } else if (!els.quickPurchaseUnit.value) {
+    els.quickPurchaseUnit.value = "kg";
   }
 }
 
@@ -1449,37 +1508,44 @@ function renderOtherSupplies() {
               <td>${escapeHtml(supplyCategories[item.category] || "Autre")}</td>
               <td>${escapeHtml(item.label)}</td>
               <td>${escapeHtml(supplier?.name || "-")}</td>
+              <td class="numeric">${escapeHtml(formatQuantity(toFiniteNumber(item.quantity), item.unit))}</td>
               <td class="numeric">${escapeHtml(formatMoney(item.unitCost, item.currency))}</td>
+              <td class="numeric">${escapeHtml(formatMoney(Number(item.quantity || 0) * Number(item.unitCost || 0), item.currency))}</td>
+              <td>${escapeHtml(supplyStatuses[item.status] || "-")}</td>
               <td>${escapeHtml(item.validFrom)}</td>
               <td>${escapeHtml(item.validTo || "Ouvert")}</td>
               <td>${escapeHtml(item.notes || "")}</td>
+              <td><button class="secondary table-action" data-delete-other-supply="${escapeHtml(item.id)}" type="button">Supprimer</button></td>
             </tr>
           `;
         })
         .join("")
-    : emptyTableRow(7);
+    : emptyTableRow(11);
 }
 
 function renderPrices() {
   const rows = [...state.prices].sort((a, b) => b.validFrom.localeCompare(a.validFrom));
   els.priceRowsCount.textContent = `${rows.length} lignes`;
 
-  els.priceRows.innerHTML = rows
-    .map((price) => {
-      const bean = getById("beans", price.beanId);
-      const supplier = getById("suppliers", price.supplierId);
-      return `
-        <tr>
-          <td>${escapeHtml(bean?.commercialName || "-")}</td>
-          <td>${escapeHtml(supplier?.name || "-")}</td>
-          <td>${escapeHtml(formatMoney(price.pricePerKg, price.currency))}</td>
-          <td>${escapeHtml(price.validFrom)}</td>
-          <td>${escapeHtml(price.validTo || "Ouvert")}</td>
-          <td>${escapeHtml(price.notes || "")}</td>
-        </tr>
-      `;
-    })
-    .join("");
+  els.priceRows.innerHTML = rows.length
+    ? rows
+        .map((price) => {
+          const bean = getById("beans", price.beanId);
+          const supplier = getById("suppliers", price.supplierId);
+          return `
+            <tr>
+              <td>${escapeHtml(bean?.commercialName || "-")}</td>
+              <td>${escapeHtml(supplier?.name || "-")}</td>
+              <td>${escapeHtml(formatMoney(price.pricePerKg, price.currency))}</td>
+              <td>${escapeHtml(price.validFrom)}</td>
+              <td>${escapeHtml(price.validTo || "Ouvert")}</td>
+              <td>${escapeHtml(price.notes || "")}</td>
+              <td><button class="secondary table-action" data-delete-price="${escapeHtml(price.id)}" type="button">Supprimer</button></td>
+            </tr>
+          `;
+        })
+        .join("")
+    : emptyTableRow(7);
 }
 
 function renderCalculation(result, compareResult) {
@@ -1894,6 +1960,29 @@ function renderDataTables() {
         .join("")
     : emptyTableRow(7);
 
+  const stockMovements = [...(state.stockMovements || [])]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 50);
+  els.stockMovementRowsCount.textContent = `${(state.stockMovements || []).length} lignes`;
+  els.stockMovementRows.innerHTML = stockMovements.length
+    ? stockMovements
+        .map((movement) => {
+          const bean = getById("beans", movement.beanId);
+          const supplier = getById("suppliers", movement.supplierId);
+          return `
+            <tr>
+              <td>${escapeHtml(movement.date)}</td>
+              <td>${escapeHtml(bean?.commercialName || "-")}</td>
+              <td>${escapeHtml(stockMovementTypes[movement.type] || movement.type || "-")}</td>
+              <td class="numeric">${escapeHtml(formatQuantity(toFiniteNumber(movement.quantity), movement.unit))}</td>
+              <td>${escapeHtml(supplier?.name || "-")}</td>
+              <td>${escapeHtml(movement.notes || "")}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : emptyTableRow(6);
+
   const historicalRows = [...(state.historicalOrders || [])]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 30);
@@ -1938,6 +2027,8 @@ function setupDefaults() {
   els.priceFrom.value = today;
   els.quickPurchaseCategory.value = "greenCoffee";
   els.quickPurchaseDate.value = today;
+  els.quickPurchaseUnit.value = "kg";
+  els.quickPurchaseStatus.value = "received";
   syncQuickPurchaseCategory();
   els.calcDate.value = "2026-02-15";
   els.compareDate.value = "2026-01-15";
@@ -2194,6 +2285,16 @@ async function updateStock(event) {
     state.greenStocks.push({ beanId, quantityKg, incomingKg, eta });
   }
 
+  addStockMovement({
+    beanId,
+    type: "manual",
+    date: today,
+    quantity: quantityKg,
+    unit: "kg",
+    eta,
+    notes: "Mise à jour manuelle du stock"
+  });
+
   await saveState();
   els.stockForm.reset();
   renderAll();
@@ -2236,18 +2337,24 @@ async function addQuickPurchase(event) {
   const itemLabel = els.quickPurchaseBean.value.trim();
   const countryName = els.quickPurchaseCountry.value.trim();
   const supplierName = els.quickPurchaseSupplier.value.trim();
-  const pricePerKg = numberValue(els.quickPurchasePrice, NaN);
+  const unitCost = numberValue(els.quickPurchasePrice, NaN);
+  const quantity = numberValue(els.quickPurchaseQuantity, NaN);
+  const unit = els.quickPurchaseUnit.value;
+  const status = els.quickPurchaseStatus.value;
   const validTo = els.quickPurchaseValidTo.value || null;
-  const quantityKg = optionalNumberValue(els.quickPurchaseStock);
-  const incomingKg = optionalNumberValue(els.quickPurchaseIncoming);
 
   if (!date || !itemLabel || !supplierName || (isGreenCoffee && !countryName)) {
     window.alert("Renseigne au minimum la date, l'article, le fournisseur et le pays pour un grain café.");
     return;
   }
 
-  if (!Number.isFinite(pricePerKg) || pricePerKg <= 0) {
-    window.alert("Le prix rendu / kg doit être supérieur à 0.");
+  if (!Number.isFinite(unitCost) || unitCost <= 0) {
+    window.alert("Le coût unitaire doit être supérieur à 0.");
+    return;
+  }
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    window.alert("La quantité doit être supérieure à 0.");
     return;
   }
 
@@ -2265,23 +2372,29 @@ async function addQuickPurchase(event) {
       category,
       label: itemLabel,
       supplierId: supplier.id,
-      unitCost: pricePerKg,
+      quantity,
+      unit,
+      unitCost,
       currency: els.quickPurchaseCurrency.value,
+      status,
       validFrom: date,
       validTo,
+      eta: els.quickPurchaseEta.value,
       notes
     });
 
     await saveState();
     els.quickPurchaseForm.reset();
     els.quickPurchaseDate.value = today;
+    els.quickPurchaseUnit.value = "kg";
+    els.quickPurchaseStatus.value = "received";
     syncQuickPurchaseCategory();
     renderAll();
     return;
   }
 
   const country = ensureCountry(countryName);
-  const bean = ensureBean(itemLabel, country.id, supplier.id, pricePerKg);
+  const bean = ensureBean(itemLabel, country.id, supplier.id, unitCost);
 
   const existingPrice = state.prices.find((price) => {
     return (
@@ -2293,7 +2406,7 @@ async function addQuickPurchase(event) {
   });
 
   if (existingPrice) {
-    existingPrice.pricePerKg = pricePerKg;
+    existingPrice.pricePerKg = unitCost;
     existingPrice.currency = els.quickPurchaseCurrency.value;
     existingPrice.notes = notes;
   } else {
@@ -2301,7 +2414,7 @@ async function addQuickPurchase(event) {
       id: `price-${crypto.randomUUID()}`,
       beanId: bean.id,
       supplierId: supplier.id,
-      pricePerKg,
+      pricePerKg: unitCost,
       currency: els.quickPurchaseCurrency.value,
       validFrom: date,
       validTo,
@@ -2309,11 +2422,26 @@ async function addQuickPurchase(event) {
     });
   }
 
-  upsertStockSnapshot(bean.id, quantityKg, incomingKg, els.quickPurchaseEta.value);
+  if (["ordered", "received"].includes(status)) {
+    addStockMovement({
+      beanId: bean.id,
+      type: status,
+      date,
+      quantity,
+      unit,
+      supplierId: supplier.id,
+      unitCost,
+      currency: els.quickPurchaseCurrency.value,
+      eta: els.quickPurchaseEta.value,
+      notes
+    });
+  }
 
   await saveState();
   els.quickPurchaseForm.reset();
   els.quickPurchaseDate.value = today;
+  els.quickPurchaseUnit.value = "kg";
+  els.quickPurchaseStatus.value = "received";
   syncQuickPurchaseCategory();
   renderAll();
 }
@@ -2351,6 +2479,28 @@ async function addPrice(event) {
   await saveState();
   els.priceForm.reset();
   els.priceFrom.value = today;
+  renderAll();
+}
+
+async function deletePrice(event) {
+  const button = event.target.closest("[data-delete-price]");
+  if (!button) return;
+
+  if (!window.confirm("Supprimer ce tarif ?")) return;
+
+  state.prices = state.prices.filter((price) => price.id !== button.dataset.deletePrice);
+  await saveState();
+  renderAll();
+}
+
+async function deleteOtherSupply(event) {
+  const button = event.target.closest("[data-delete-other-supply]");
+  if (!button) return;
+
+  if (!window.confirm("Supprimer cet approvisionnement ?")) return;
+
+  state.otherSupplies = state.otherSupplies.filter((item) => item.id !== button.dataset.deleteOtherSupply);
+  await saveState();
   renderAll();
 }
 
@@ -2540,7 +2690,9 @@ els.historyForm.addEventListener("submit", addHistoricalOrder);
 els.countryName.addEventListener("change", syncSelectedCountryRegion);
 els.quickPurchaseCategory.addEventListener("change", syncQuickPurchaseCategory);
 els.quickPurchaseForm.addEventListener("submit", addQuickPurchase);
+els.otherSupplyRows.addEventListener("click", deleteOtherSupply);
 els.priceForm.addEventListener("submit", addPrice);
+els.priceRows.addEventListener("click", deletePrice);
 els.calculatorForm.addEventListener("submit", runCalculator);
 els.forecastForm.addEventListener("submit", runForecast);
 els.batchForm.addEventListener("submit", addBatch);
