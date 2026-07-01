@@ -799,7 +799,51 @@
                   <button class="secondary align-end" id="downloadHistoryTemplate" type="button">Modèle CSV</button>
                   <button class="primary align-end" type="submit">Importer</button>
                 </form>
-                <p class="import-status muted" id="importStatus" aria-live="polite"></p>
+                <p class="import-status muted" id="historyImportStatus" aria-live="polite"></p>
+              </section>
+
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Import tarifs</h2>
+                </div>
+                <form class="form-grid compact" id="priceImportForm">
+                  <label class="wide">
+                    Fichier CSV
+                    <input id="priceImportFile" type="file" accept=".csv,text/csv" required />
+                  </label>
+                  <label>
+                    Mode
+                    <select id="priceImportMode">
+                      <option value="upsert">Ajouter / mettre à jour</option>
+                      <option value="replace">Remplacer les tarifs</option>
+                    </select>
+                  </label>
+                  <button class="secondary align-end" id="downloadPriceTemplate" type="button">Modèle CSV</button>
+                  <button class="primary align-end" type="submit">Importer</button>
+                </form>
+                <p class="import-status muted" id="priceImportStatus" aria-live="polite"></p>
+              </section>
+
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Import stocks</h2>
+                </div>
+                <form class="form-grid compact" id="stockImportForm">
+                  <label class="wide">
+                    Fichier CSV
+                    <input id="stockImportFile" type="file" accept=".csv,text/csv" required />
+                  </label>
+                  <label>
+                    Mode
+                    <select id="stockImportMode">
+                      <option value="upsert">Mettre à jour les stocks</option>
+                      <option value="reset">Remplacer, vides = 0</option>
+                    </select>
+                  </label>
+                  <button class="secondary align-end" id="downloadStockTemplate" type="button">Modèle CSV</button>
+                  <button class="primary align-end" type="submit">Importer</button>
+                </form>
+                <p class="import-status muted" id="stockImportStatus" aria-live="polite"></p>
               </section>
             </div>
           </div>

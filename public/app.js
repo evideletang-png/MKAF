@@ -491,7 +491,17 @@ const els = {
   historyImportFile: document.querySelector("#historyImportFile"),
   historyImportMode: document.querySelector("#historyImportMode"),
   downloadHistoryTemplate: document.querySelector("#downloadHistoryTemplate"),
-  importStatus: document.querySelector("#importStatus"),
+  historyImportStatus: document.querySelector("#historyImportStatus"),
+  priceImportForm: document.querySelector("#priceImportForm"),
+  priceImportFile: document.querySelector("#priceImportFile"),
+  priceImportMode: document.querySelector("#priceImportMode"),
+  downloadPriceTemplate: document.querySelector("#downloadPriceTemplate"),
+  priceImportStatus: document.querySelector("#priceImportStatus"),
+  stockImportForm: document.querySelector("#stockImportForm"),
+  stockImportFile: document.querySelector("#stockImportFile"),
+  stockImportMode: document.querySelector("#stockImportMode"),
+  downloadStockTemplate: document.querySelector("#downloadStockTemplate"),
+  stockImportStatus: document.querySelector("#stockImportStatus"),
   logoutButton: document.querySelector("#logoutButton")
 };
 
@@ -2718,9 +2728,11 @@ function exportSuppliersCsv() {
 function exportPricesCsv() {
   const rows = state.prices.map((price) => {
     const bean = getById("beans", price.beanId);
+    const country = getById("countries", bean?.countryId);
     const supplier = getById("suppliers", price.supplierId);
     return {
       grain: bean?.commercialName || "",
+      pays: country?.name || "",
       fournisseur: supplier?.name || "",
       prix_kg: price.pricePerKg,
       devise: price.currency || "EUR",
@@ -2732,6 +2744,7 @@ function exportPricesCsv() {
 
   downloadCsv(`mkaf-tarifs-${today}.csv`, [
     { key: "grain", label: "grain" },
+    { key: "pays", label: "pays" },
     { key: "fournisseur", label: "fournisseur" },
     { key: "prix_kg", label: "prix_kg" },
     { key: "devise", label: "devise" },
@@ -2743,9 +2756,13 @@ function exportPricesCsv() {
 
 function exportStocksCsv() {
   const rows = state.beans.map((bean) => {
+    const country = getById("countries", bean.countryId);
+    const supplier = getById("suppliers", bean.defaultSupplierId);
     const stockInfo = getStockInfo(bean);
     return {
       grain: bean.commercialName,
+      pays: country?.name || "",
+      fournisseur: supplier?.name || "",
       stock_kg: stockInfo.quantityKg,
       commande_kg: stockInfo.incomingKg,
       eta: stockInfo.eta,
@@ -2758,6 +2775,8 @@ function exportStocksCsv() {
 
   downloadCsv(`mkaf-stocks-${today}.csv`, [
     { key: "grain", label: "grain" },
+    { key: "pays", label: "pays" },
+    { key: "fournisseur", label: "fournisseur" },
     { key: "stock_kg", label: "stock_kg" },
     { key: "commande_kg", label: "commande_kg" },
     { key: "eta", label: "eta" },
@@ -2941,6 +2960,136 @@ function parseHistoricalImport(text) {
   return { orders, errors };
 }
 
+function resolveImportBean(record, lineNumber, errors, supplier, landedCostPerKg) {
+  const grainName = csvValue(record, ["grain", "article", "cafe", "coffee", "bean"]);
+  if (!grainName) {
+    errors.push(`Ligne ${lineNumber} : grain manquant`);
+    return null;
+  }
+
+  const existingBean = findByName("beans", "commercialName", grainName);
+  if (existingBean) return existingBean;
+
+  const countryName = csvValue(record, ["pays", "country", "origine", "origin"]);
+  if (!countryName) {
+    errors.push(`Ligne ${lineNumber} : grain inconnu, ajoute un pays pour le créer`);
+    return null;
+  }
+
+  if (!supplier) {
+    errors.push(`Ligne ${lineNumber} : grain inconnu, ajoute un fournisseur pour le créer`);
+    return null;
+  }
+
+  const country = ensureCountry(countryName);
+  return ensureBean(grainName, country.id, supplier.id, landedCostPerKg);
+}
+
+function parsePriceImport(text) {
+  const records = csvRecords(text);
+  const errors = [];
+  const prices = [];
+
+  records.forEach((record, index) => {
+    const lineNumber = index + 2;
+    const supplierName = csvValue(record, ["fournisseur", "supplier", "importateur"]);
+    const unitCost = parseLocaleNumber(csvValue(record, ["prix_kg", "prix", "cout_kg", "cout", "price_per_kg"]));
+    const currency = (csvValue(record, ["devise", "currency"]) || "EUR").trim().toUpperCase();
+    const validFrom = csvValue(record, ["valable_du", "date", "debut", "valid_from"]);
+    const validTo = csvValue(record, ["valable_au", "fin", "valid_to"]) || null;
+    const notes = csvValue(record, ["note", "notes", "commentaire"]);
+
+    if (!supplierName) {
+      errors.push(`Ligne ${lineNumber} : fournisseur manquant`);
+      return;
+    }
+
+    if (!Number.isFinite(unitCost) || unitCost <= 0) {
+      errors.push(`Ligne ${lineNumber} : prix invalide`);
+      return;
+    }
+
+    if (!isIsoDate(validFrom)) {
+      errors.push(`Ligne ${lineNumber} : date de début invalide`);
+      return;
+    }
+
+    if (validTo && (!isIsoDate(validTo) || validTo < validFrom)) {
+      errors.push(`Ligne ${lineNumber} : date de fin invalide`);
+      return;
+    }
+
+    const supplier = ensureSupplier(supplierName, currency);
+    const bean = resolveImportBean(record, lineNumber, errors, supplier, unitCost);
+    if (!bean) return;
+
+    prices.push({
+      id: `price-${crypto.randomUUID()}`,
+      beanId: bean.id,
+      supplierId: supplier.id,
+      pricePerKg: Number(unitCost.toFixed(4)),
+      currency,
+      validFrom,
+      validTo,
+      notes
+    });
+  });
+
+  return { prices, errors };
+}
+
+function parseStockImport(text) {
+  const records = csvRecords(text);
+  const errors = [];
+  const stocks = [];
+
+  records.forEach((record, index) => {
+    const lineNumber = index + 2;
+    const supplierName = csvValue(record, ["fournisseur", "supplier", "importateur"]);
+    const stockRaw = csvValue(record, ["stock_kg", "stock", "quantite_stock", "quantity"]);
+    const incomingRaw = csvValue(record, ["commande_kg", "commande", "incoming_kg", "en_cours"]);
+    const quantityKg = stockRaw === "" ? NaN : parseLocaleNumber(stockRaw);
+    const incomingKg = incomingRaw === "" ? NaN : parseLocaleNumber(incomingRaw);
+    const eta = csvValue(record, ["eta", "arrivee", "date_arrivee"]);
+    const notes = csvValue(record, ["note", "notes", "commentaire"]);
+    const supplier = supplierName ? ensureSupplier(supplierName) : null;
+    const bean = resolveImportBean(record, lineNumber, errors, supplier, NaN);
+
+    if (!bean) return;
+
+    if (!Number.isFinite(quantityKg) && !Number.isFinite(incomingKg)) {
+      errors.push(`Ligne ${lineNumber} : stock ou commande manquant`);
+      return;
+    }
+
+    if (Number.isFinite(quantityKg) && quantityKg < 0) {
+      errors.push(`Ligne ${lineNumber} : stock invalide`);
+      return;
+    }
+
+    if (Number.isFinite(incomingKg) && incomingKg < 0) {
+      errors.push(`Ligne ${lineNumber} : commande invalide`);
+      return;
+    }
+
+    if (eta && !isIsoDate(eta)) {
+      errors.push(`Ligne ${lineNumber} : ETA invalide`);
+      return;
+    }
+
+    stocks.push({
+      beanId: bean.id,
+      supplierId: supplier?.id || bean.defaultSupplierId || "",
+      quantityKg,
+      incomingKg,
+      eta,
+      notes
+    });
+  });
+
+  return { stocks, errors };
+}
+
 function readFileAsText(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -2950,9 +3099,9 @@ function readFileAsText(file) {
   });
 }
 
-function setImportStatus(message, status = "muted") {
-  els.importStatus.textContent = message;
-  els.importStatus.className = `import-status ${status}`;
+function setImportStatus(element, message, status = "muted") {
+  element.textContent = message;
+  element.className = `import-status ${status}`;
 }
 
 function downloadHistoryTemplate() {
@@ -2974,6 +3123,62 @@ function downloadHistoryTemplate() {
   ], rows);
 }
 
+function downloadPriceTemplate() {
+  const sampleBean = state.beans[0];
+  const sampleCountry = getById("countries", sampleBean?.countryId);
+  const sampleSupplier = getById("suppliers", sampleBean?.defaultSupplierId);
+  const rows = [
+    {
+      grain: sampleBean?.commercialName || "Brésil Santos",
+      pays: sampleCountry?.name || "Brésil",
+      fournisseur: sampleSupplier?.name || "Importateur A",
+      prix_kg: "5.95",
+      devise: "EUR",
+      valable_du: today,
+      valable_au: "",
+      note: "Contrat ou cotation"
+    }
+  ];
+
+  downloadCsv(`modele-tarifs-${today}.csv`, [
+    { key: "grain", label: "grain" },
+    { key: "pays", label: "pays" },
+    { key: "fournisseur", label: "fournisseur" },
+    { key: "prix_kg", label: "prix_kg" },
+    { key: "devise", label: "devise" },
+    { key: "valable_du", label: "valable_du" },
+    { key: "valable_au", label: "valable_au" },
+    { key: "note", label: "note" }
+  ], rows);
+}
+
+function downloadStockTemplate() {
+  const sampleBean = state.beans[0];
+  const sampleCountry = getById("countries", sampleBean?.countryId);
+  const sampleSupplier = getById("suppliers", sampleBean?.defaultSupplierId);
+  const rows = [
+    {
+      grain: sampleBean?.commercialName || "Brésil Santos",
+      pays: sampleCountry?.name || "Brésil",
+      fournisseur: sampleSupplier?.name || "Importateur A",
+      stock_kg: "120",
+      commande_kg: "250",
+      eta: addDays(today, 30),
+      note: "Inventaire ou commande en cours"
+    }
+  ];
+
+  downloadCsv(`modele-stocks-${today}.csv`, [
+    { key: "grain", label: "grain" },
+    { key: "pays", label: "pays" },
+    { key: "fournisseur", label: "fournisseur" },
+    { key: "stock_kg", label: "stock_kg" },
+    { key: "commande_kg", label: "commande_kg" },
+    { key: "eta", label: "eta" },
+    { key: "note", label: "note" }
+  ], rows);
+}
+
 async function importHistoricalOrders(event) {
   event.preventDefault();
 
@@ -2985,7 +3190,7 @@ async function importHistoricalOrders(event) {
     const { orders, errors } = parseHistoricalImport(text);
 
     if (orders.length === 0) {
-      setImportStatus(errors[0] || "Aucune ligne importable.", "warning");
+      setImportStatus(els.historyImportStatus, errors[0] || "Aucune ligne importable.", "warning");
       return;
     }
 
@@ -3016,9 +3221,110 @@ async function importHistoricalOrders(event) {
     renderAll();
 
     const skipped = errors.length ? `, ${errors.length} ignorée(s)` : "";
-    setImportStatus(`${inserted} ajoutée(s), ${updated} mise(s) à jour${skipped}.`, errors.length ? "warning" : "success");
+    setImportStatus(els.historyImportStatus, `${inserted} ajoutée(s), ${updated} mise(s) à jour${skipped}.`, errors.length ? "warning" : "success");
   } catch {
-    setImportStatus("Import impossible.", "warning");
+    setImportStatus(els.historyImportStatus, "Import impossible.", "warning");
+  }
+}
+
+async function importPrices(event) {
+  event.preventDefault();
+
+  const file = els.priceImportFile.files[0];
+  if (!file) return;
+
+  try {
+    const text = await readFileAsText(file);
+    const { prices, errors } = parsePriceImport(text);
+
+    if (prices.length === 0) {
+      setImportStatus(els.priceImportStatus, errors[0] || "Aucune ligne importable.", "warning");
+      return;
+    }
+
+    let inserted = 0;
+    let updated = 0;
+
+    if (els.priceImportMode.value === "replace") {
+      state.prices = [];
+    }
+
+    prices.forEach((price) => {
+      const existing = state.prices.find((item) => {
+        return (
+          item.beanId === price.beanId &&
+          item.supplierId === price.supplierId &&
+          item.validFrom === price.validFrom &&
+          (item.validTo || null) === (price.validTo || null)
+        );
+      });
+
+      if (existing) {
+        existing.pricePerKg = price.pricePerKg;
+        existing.currency = price.currency;
+        existing.notes = price.notes;
+        updated += 1;
+      } else {
+        state.prices.unshift(price);
+        inserted += 1;
+      }
+    });
+
+    state.prices.sort((a, b) => b.validFrom.localeCompare(a.validFrom));
+    await saveState();
+    els.priceImportForm.reset();
+    renderAll();
+
+    const skipped = errors.length ? `, ${errors.length} ignorée(s)` : "";
+    setImportStatus(els.priceImportStatus, `${inserted} ajouté(s), ${updated} mis à jour${skipped}.`, errors.length ? "warning" : "success");
+  } catch {
+    setImportStatus(els.priceImportStatus, "Import impossible.", "warning");
+  }
+}
+
+async function importStocks(event) {
+  event.preventDefault();
+
+  const file = els.stockImportFile.files[0];
+  if (!file) return;
+
+  try {
+    const text = await readFileAsText(file);
+    const { stocks, errors } = parseStockImport(text);
+
+    if (stocks.length === 0) {
+      setImportStatus(els.stockImportStatus, errors[0] || "Aucune ligne importable.", "warning");
+      return;
+    }
+
+    stocks.forEach((stockRow) => {
+      const quantityKg = els.stockImportMode.value === "reset" && !Number.isFinite(stockRow.quantityKg) ? 0 : stockRow.quantityKg;
+      const incomingKg = els.stockImportMode.value === "reset" && !Number.isFinite(stockRow.incomingKg) ? 0 : stockRow.incomingKg;
+      const snapshot = upsertStockSnapshot(stockRow.beanId, quantityKg, incomingKg, stockRow.eta);
+
+      state.stockMovements.unshift({
+        id: `movement-${crypto.randomUUID()}`,
+        beanId: stockRow.beanId,
+        type: "manual",
+        date: today,
+        quantity: Number(snapshot.quantityKg || 0),
+        unit: "kg",
+        supplierId: stockRow.supplierId,
+        unitCost: null,
+        currency: "EUR",
+        eta: stockRow.eta,
+        notes: stockRow.notes || "Import CSV stock"
+      });
+    });
+
+    await saveState();
+    els.stockImportForm.reset();
+    renderAll();
+
+    const skipped = errors.length ? `, ${errors.length} ignorée(s)` : "";
+    setImportStatus(els.stockImportStatus, `${stocks.length} stock(s) mis à jour${skipped}.`, errors.length ? "warning" : "success");
+  } catch {
+    setImportStatus(els.stockImportStatus, "Import impossible.", "warning");
   }
 }
 
@@ -3146,6 +3452,10 @@ els.exportData.addEventListener("click", exportData);
 els.exportCsvButtons.forEach((button) => button.addEventListener("click", exportCsv));
 els.historyImportForm.addEventListener("submit", importHistoricalOrders);
 els.downloadHistoryTemplate.addEventListener("click", downloadHistoryTemplate);
+els.priceImportForm.addEventListener("submit", importPrices);
+els.downloadPriceTemplate.addEventListener("click", downloadPriceTemplate);
+els.stockImportForm.addEventListener("submit", importStocks);
+els.downloadStockTemplate.addEventListener("click", downloadStockTemplate);
 els.logoutButton.addEventListener("click", logout);
 
 async function initializeApp() {
