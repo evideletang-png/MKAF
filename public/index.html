@@ -67,14 +67,25 @@
             </div>
             <form class="form-grid supply-form" id="quickPurchaseForm">
               <label>
+                Type
+                <select id="quickPurchaseCategory" required>
+                  <option value="greenCoffee">Café vert</option>
+                  <option value="packaging">Packaging</option>
+                  <option value="energy">Énergie</option>
+                  <option value="transport">Transport</option>
+                  <option value="consumable">Consommable</option>
+                  <option value="other">Autre</option>
+                </select>
+              </label>
+              <label>
                 Date d'effet
                 <input id="quickPurchaseDate" type="date" required />
               </label>
               <label>
-                Grain
-                <input id="quickPurchaseBean" list="quickBeanOptions" type="text" placeholder="Brésil Santos" required />
+                Article
+                <input id="quickPurchaseBean" list="quickBeanOptions" type="text" placeholder="Brésil Santos, sachet 250 g..." required />
               </label>
-              <label>
+              <label class="green-field">
                 Pays
                 <select id="quickPurchaseCountry" required></select>
               </label>
@@ -83,7 +94,7 @@
                 <input id="quickPurchaseSupplier" list="quickSupplierOptions" type="text" placeholder="Importateur..." required />
               </label>
               <label>
-                Prix rendu / kg
+                Coût unitaire
                 <input id="quickPurchasePrice" inputmode="decimal" min="0.01" step="0.01" type="number" required />
               </label>
               <label>
@@ -93,15 +104,15 @@
                   <option>USD</option>
                 </select>
               </label>
-              <label>
+              <label class="green-field">
                 Stock actuel kg
                 <input id="quickPurchaseStock" inputmode="decimal" min="0" step="0.1" type="number" placeholder="Optionnel" />
               </label>
-              <label>
+              <label class="green-field">
                 Commande en cours kg
                 <input id="quickPurchaseIncoming" inputmode="decimal" min="0" step="0.1" type="number" placeholder="Optionnel" />
               </label>
-              <label>
+              <label class="green-field">
                 ETA
                 <input id="quickPurchaseEta" type="date" />
               </label>
@@ -138,6 +149,29 @@
                   </tr>
                 </thead>
                 <tbody id="supplyRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Autres approvisionnements</h2>
+              <span class="muted" id="otherSupplyRowsCount"></span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Article</th>
+                    <th>Fournisseur</th>
+                    <th class="numeric">Coût</th>
+                    <th>Début</th>
+                    <th>Fin</th>
+                    <th>Note</th>
+                  </tr>
+                </thead>
+                <tbody id="otherSupplyRows"></tbody>
               </table>
             </div>
           </section>

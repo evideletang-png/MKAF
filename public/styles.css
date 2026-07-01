@@ -443,6 +443,13 @@ input[readonly] {
   color: var(--muted);
 }
 
+input:disabled,
+select:disabled {
+  background: var(--surface-soft);
+  color: #9aa7a2;
+  cursor: not-allowed;
+}
+
 .wide {
   grid-column: span 3;
 }

@@ -90,6 +90,15 @@ const referenceCountries = [
   { id: "country-zw", name: "Zimbabwe", region: "Afrique" }
 ];
 
+const supplyCategories = {
+  greenCoffee: "Café vert",
+  packaging: "Packaging",
+  energy: "Énergie",
+  transport: "Transport",
+  consumable: "Consommable",
+  other: "Autre"
+};
+
 function addDays(date, days) {
   const next = new Date(`${date}T12:00:00Z`);
   next.setUTCDate(next.getUTCDate() + days);
@@ -233,6 +242,7 @@ const seedState = {
       qualityNotes: "Floral, agrumes, très bon niveau tasse."
     }
   ],
+  otherSupplies: [],
   prices: [
     {
       id: "price-1",
@@ -347,6 +357,7 @@ const els = {
   priceRows: document.querySelector("#priceRows"),
   priceRowsCount: document.querySelector("#priceRowsCount"),
   quickPurchaseForm: document.querySelector("#quickPurchaseForm"),
+  quickPurchaseCategory: document.querySelector("#quickPurchaseCategory"),
   quickPurchaseDate: document.querySelector("#quickPurchaseDate"),
   quickPurchaseBean: document.querySelector("#quickPurchaseBean"),
   quickPurchaseCountry: document.querySelector("#quickPurchaseCountry"),
@@ -361,6 +372,8 @@ const els = {
   quickBeanOptions: document.querySelector("#quickBeanOptions"),
   quickSupplierOptions: document.querySelector("#quickSupplierOptions"),
   supplyRows: document.querySelector("#supplyRows"),
+  otherSupplyRows: document.querySelector("#otherSupplyRows"),
+  otherSupplyRowsCount: document.querySelector("#otherSupplyRowsCount"),
   calculatorForm: document.querySelector("#calculatorForm"),
   calcBlend: document.querySelector("#calcBlend"),
   calcDate: document.querySelector("#calcDate"),
@@ -458,6 +471,7 @@ function normalizeState(candidate) {
     countries: Array.isArray(candidate.countries) ? candidate.countries : base.countries,
     suppliers: Array.isArray(candidate.suppliers) ? candidate.suppliers : base.suppliers,
     beans: Array.isArray(candidate.beans) ? candidate.beans : base.beans,
+    otherSupplies: Array.isArray(candidate.otherSupplies) ? candidate.otherSupplies : base.otherSupplies,
     prices: Array.isArray(candidate.prices) ? candidate.prices : base.prices,
     blends: Array.isArray(candidate.blends) ? candidate.blends : base.blends,
     batches: Array.isArray(candidate.batches) ? candidate.batches : base.batches,
@@ -1295,6 +1309,22 @@ function syncSelectedCountryRegion() {
   els.countryRegion.value = referenceCountry?.region || "";
 }
 
+function syncQuickPurchaseCategory() {
+  const isGreenCoffee = els.quickPurchaseCategory.value === "greenCoffee";
+  els.quickPurchaseCountry.disabled = !isGreenCoffee;
+  els.quickPurchaseCountry.required = isGreenCoffee;
+  els.quickPurchaseStock.disabled = !isGreenCoffee;
+  els.quickPurchaseIncoming.disabled = !isGreenCoffee;
+  els.quickPurchaseEta.disabled = !isGreenCoffee;
+
+  if (!isGreenCoffee) {
+    els.quickPurchaseCountry.value = "";
+    els.quickPurchaseStock.value = "";
+    els.quickPurchaseIncoming.value = "";
+    els.quickPurchaseEta.value = "";
+  }
+}
+
 function renderMetrics() {
   const alerts = calculateAlerts();
   const validPrices = state.prices.filter((price) => dateInRange(today, price.validFrom, price.validTo));
@@ -1405,6 +1435,29 @@ function renderSupplyOverview() {
         })
         .join("")
     : emptyTableRow(8);
+}
+
+function renderOtherSupplies() {
+  const rows = [...(state.otherSupplies || [])].sort((a, b) => b.validFrom.localeCompare(a.validFrom));
+  els.otherSupplyRowsCount.textContent = `${rows.length} lignes`;
+  els.otherSupplyRows.innerHTML = rows.length
+    ? rows
+        .map((item) => {
+          const supplier = getById("suppliers", item.supplierId);
+          return `
+            <tr>
+              <td>${escapeHtml(supplyCategories[item.category] || "Autre")}</td>
+              <td>${escapeHtml(item.label)}</td>
+              <td>${escapeHtml(supplier?.name || "-")}</td>
+              <td class="numeric">${escapeHtml(formatMoney(item.unitCost, item.currency))}</td>
+              <td>${escapeHtml(item.validFrom)}</td>
+              <td>${escapeHtml(item.validTo || "Ouvert")}</td>
+              <td>${escapeHtml(item.notes || "")}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : emptyTableRow(7);
 }
 
 function renderPrices() {
@@ -1869,6 +1922,7 @@ function renderAll() {
   renderAlerts();
   renderBlendCards();
   renderSupplyOverview();
+  renderOtherSupplies();
   renderPrices();
   renderForecast();
   renderBatches();
@@ -1882,7 +1936,9 @@ function setupDefaults() {
   };
 
   els.priceFrom.value = today;
+  els.quickPurchaseCategory.value = "greenCoffee";
   els.quickPurchaseDate.value = today;
+  syncQuickPurchaseCategory();
   els.calcDate.value = "2026-02-15";
   els.compareDate.value = "2026-01-15";
   els.forecastStart.value = forecastSettings.startDate;
@@ -2174,8 +2230,10 @@ async function addHistoricalOrder(event) {
 async function addQuickPurchase(event) {
   event.preventDefault();
 
+  const category = els.quickPurchaseCategory.value;
+  const isGreenCoffee = category === "greenCoffee";
   const date = els.quickPurchaseDate.value;
-  const beanName = els.quickPurchaseBean.value.trim();
+  const itemLabel = els.quickPurchaseBean.value.trim();
   const countryName = els.quickPurchaseCountry.value.trim();
   const supplierName = els.quickPurchaseSupplier.value.trim();
   const pricePerKg = numberValue(els.quickPurchasePrice, NaN);
@@ -2183,8 +2241,8 @@ async function addQuickPurchase(event) {
   const quantityKg = optionalNumberValue(els.quickPurchaseStock);
   const incomingKg = optionalNumberValue(els.quickPurchaseIncoming);
 
-  if (!date || !beanName || !countryName || !supplierName) {
-    window.alert("Renseigne au minimum la date, le grain, le pays et le fournisseur.");
+  if (!date || !itemLabel || !supplierName || (isGreenCoffee && !countryName)) {
+    window.alert("Renseigne au minimum la date, l'article, le fournisseur et le pays pour un café vert.");
     return;
   }
 
@@ -2198,10 +2256,32 @@ async function addQuickPurchase(event) {
     return;
   }
 
-  const country = ensureCountry(countryName);
   const supplier = ensureSupplier(supplierName, els.quickPurchaseCurrency.value);
-  const bean = ensureBean(beanName, country.id, supplier.id, pricePerKg);
   const notes = els.quickPurchaseNotes.value.trim();
+
+  if (!isGreenCoffee) {
+    state.otherSupplies.unshift({
+      id: `supply-${crypto.randomUUID()}`,
+      category,
+      label: itemLabel,
+      supplierId: supplier.id,
+      unitCost: pricePerKg,
+      currency: els.quickPurchaseCurrency.value,
+      validFrom: date,
+      validTo,
+      notes
+    });
+
+    await saveState();
+    els.quickPurchaseForm.reset();
+    els.quickPurchaseDate.value = today;
+    syncQuickPurchaseCategory();
+    renderAll();
+    return;
+  }
+
+  const country = ensureCountry(countryName);
+  const bean = ensureBean(itemLabel, country.id, supplier.id, pricePerKg);
 
   const existingPrice = state.prices.find((price) => {
     return (
@@ -2234,6 +2314,7 @@ async function addQuickPurchase(event) {
   await saveState();
   els.quickPurchaseForm.reset();
   els.quickPurchaseDate.value = today;
+  syncQuickPurchaseCategory();
   renderAll();
 }
 
@@ -2457,6 +2538,7 @@ els.blendComponents.addEventListener("click", removeBlendComponentRow);
 els.stockForm.addEventListener("submit", updateStock);
 els.historyForm.addEventListener("submit", addHistoricalOrder);
 els.countryName.addEventListener("change", syncSelectedCountryRegion);
+els.quickPurchaseCategory.addEventListener("change", syncQuickPurchaseCategory);
 els.quickPurchaseForm.addEventListener("submit", addQuickPurchase);
 els.priceForm.addEventListener("submit", addPrice);
 els.calculatorForm.addEventListener("submit", runCalculator);
