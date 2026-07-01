@@ -6,7 +6,7 @@ Prototype interne Max Cafés pour piloter les grains, les fournisseurs, les asse
 
 - Catalogue de grains et fournisseurs de démonstration.
 - Création de pays producteurs, fournisseurs, grains, assemblages, stocks et lignes d'activité N-1 depuis l'interface.
-- Référentiel de 22 pays producteurs initialisé automatiquement si la base est vide ou incomplète.
+- Référentiel élargi de 57 origines café, avec région automatique et ajout depuis une liste contrôlée.
 - Fiches grains enrichies : origine, région, variété, récolte, container, arrivée, altitude, score SCA, humidité, densité, calibre, coût rendu entrepôt, emplacement et notes qualité.
 - Fiches fournisseurs enrichies : délai moyen, fiabilité, Incoterms, conditions de paiement et certifications.
 - Saisie de tarifs datés par grain et fournisseur.
@@ -14,7 +14,7 @@ Prototype interne Max Cafés pour piloter les grains, les fournisseurs, les asse
 - Comparaison du coût entre deux dates.
 - Estimation de commandes par rapport à l'activité N-1 jour par jour.
 - Facteurs de prévision : croissance, saisonnalité, événements, météo, promos et stock de sécurité.
-- Conversion de la demande prévue en besoin de café vert par grain.
+- Conversion de la demande prévue en besoin de grains café par origine.
 - Stocks intelligents : consommation moyenne, autonomie, commande en cours, ETA, risque de rupture et valeur immobilisée.
 - Alertes sur prix manquant, coût trop élevé, tarif bientôt expiré, autonomie courte, humidité élevée, score SCA faible et fiabilité fournisseur basse.
 - Création de batchs de production avec coût figé, machine, opérateur, perte réelle et notes de courbe.

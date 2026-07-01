@@ -91,7 +91,7 @@ const referenceCountries = [
 ];
 
 const supplyCategories = {
-  greenCoffee: "Café vert",
+  greenCoffee: "Grain café",
   packaging: "Packaging",
   energy: "Énergie",
   transport: "Transport",
@@ -1336,7 +1336,7 @@ function renderMetrics() {
   els.metrics.innerHTML = [
     ["Grains suivis", state.beans.length, `${riskCount} à surveiller`],
     ["Tarifs saisis", state.prices.length, `${validPrices.length} actifs aujourd'hui`],
-    ["Stock valorisé", formatMoney(stockValue), "Café vert disponible"],
+    ["Stock valorisé", formatMoney(stockValue), "Grains café disponibles"],
     ["Prévision 14 j", formatKg(forecast.totalForecastRoastedKg), `${formatKg(forecast.totalOrderKg)} à commander`]
   ]
     .map(
@@ -1513,7 +1513,7 @@ function renderCalculation(result, compareResult) {
     </div>
     <div class="result-card">
       <strong>${formatMoney(result.greenCostPerKg)}</strong>
-      <span>Coût matière café vert / kg</span>
+      <span>Coût matière grain café / kg</span>
     </div>
     <div class="result-card">
       <strong>${formatMoney(result.roastedCostPerKg)}</strong>
@@ -1539,7 +1539,7 @@ function renderCalculation(result, compareResult) {
 function renderForecast(result = calculateForecast()) {
   els.forecastMetrics.innerHTML = [
     ["Demande prévue", formatKg(result.totalForecastRoastedKg), "Café torréfié sur l'horizon"],
-    ["Besoin café vert", formatKg(result.totalGreenRequiredKg), "Avant stock de sécurité"],
+    ["Besoin en grains café", formatKg(result.totalGreenRequiredKg), "Avant stock de sécurité"],
     ["À commander", formatKg(result.totalOrderKg), "Après stock disponible"],
     ["Facteur global", formatPct((result.multiplier - 1) * 100), "Croissance, saison, contexte"]
   ]
@@ -2242,7 +2242,7 @@ async function addQuickPurchase(event) {
   const incomingKg = optionalNumberValue(els.quickPurchaseIncoming);
 
   if (!date || !itemLabel || !supplierName || (isGreenCoffee && !countryName)) {
-    window.alert("Renseigne au minimum la date, l'article, le fournisseur et le pays pour un café vert.");
+    window.alert("Renseigne au minimum la date, l'article, le fournisseur et le pays pour un grain café.");
     return;
   }
 
