@@ -309,7 +309,10 @@
         <section class="view" id="forecast">
           <section class="panel">
             <div class="panel-heading">
-              <h2>Estimation de commande N-1</h2>
+              <h2 class="heading-with-help">
+                Estimation de commande N-1
+                <span class="help-tip" tabindex="0" aria-label="Aide sur la prévision N-1" data-tooltip="La prévision part de l'activité de l'année précédente, puis applique les facteurs saisis.">?</span>
+              </h2>
             </div>
             <form class="form-grid forecast-form" id="forecastForm">
               <label>
@@ -321,23 +324,38 @@
                 <input id="forecastHorizon" inputmode="numeric" min="1" max="90" step="1" type="number" required />
               </label>
               <label>
-                Croissance vs N-1 %
+                <span class="label-with-help">
+                  Croissance vs N-1 %
+                  <span class="help-tip" tabindex="0" aria-label="Aide croissance" data-tooltip="Hausse ou baisse générale attendue par rapport à l'année précédente. Exemple : 5 ajoute 5 %.">?</span>
+                </span>
                 <input id="forecastGrowth" inputmode="decimal" step="0.1" type="number" />
               </label>
               <label>
-                Saison / contexte %
+                <span class="label-with-help">
+                  Saison / contexte %
+                  <span class="help-tip" tabindex="0" aria-label="Aide saison et contexte" data-tooltip="Correction liée à la période, aux vacances, à la météo commerciale ou au contexte local.">?</span>
+                </span>
                 <input id="forecastSeason" inputmode="decimal" step="0.1" type="number" />
               </label>
               <label>
-                Événements / météo %
+                <span class="label-with-help">
+                  Événements / météo %
+                  <span class="help-tip" tabindex="0" aria-label="Aide événements et météo" data-tooltip="Ajustement ponctuel pour salon, marché, forte chaleur, pluie, fermeture ou événement local.">?</span>
+                </span>
                 <input id="forecastExternal" inputmode="decimal" step="0.1" type="number" />
               </label>
               <label>
-                Promo / commandes connues %
+                <span class="label-with-help">
+                  Promo / commandes connues %
+                  <span class="help-tip" tabindex="0" aria-label="Aide promotions et commandes connues" data-tooltip="Impact attendu des promos, contrats déjà prévus ou commandes probables non visibles dans N-1.">?</span>
+                </span>
                 <input id="forecastKnownOrders" inputmode="decimal" step="0.1" type="number" />
               </label>
               <label>
-                Stock de sécurité %
+                <span class="label-with-help">
+                  Stock de sécurité %
+                  <span class="help-tip" tabindex="0" aria-label="Aide stock de sécurité" data-tooltip="Marge ajoutée au besoin prévu pour éviter une rupture si la demande augmente ou si une livraison tarde.">?</span>
+                </span>
                 <input id="forecastSafety" inputmode="decimal" min="0" step="0.1" type="number" />
               </label>
               <button class="primary align-end" type="submit">Calculer la prévision</button>
@@ -349,7 +367,10 @@
           <div class="section-grid">
             <section class="panel">
               <div class="panel-heading">
-                <h2>Plan d'achat prévisionnel</h2>
+                <h2 class="heading-with-help">
+                  Plan d'achat prévisionnel
+                  <span class="help-tip" tabindex="0" aria-label="Aide plan d'achat" data-tooltip="Recommandation à exporter vers le CRM : quoi acheter, combien, quand, auprès du fournisseur habituel.">?</span>
+                </h2>
                 <button class="secondary" data-export-csv="purchasePlan" type="button">Exporter CSV</button>
               </div>
               <div id="forecastBeanNeeds" class="table-wrap"></div>
@@ -632,31 +653,52 @@
                   <input id="blendName" type="text" placeholder="Espresso Maison" required />
                 </label>
                 <label>
-                  Perte à la torréfaction %
+                  <span class="label-with-help">
+                    Perte à la torréfaction %
+                    <span class="help-tip" tabindex="0" aria-label="Aide perte à la torréfaction" data-tooltip="Pourcentage de poids perdu pendant la cuisson. 100 kg de grains avec 15 % de perte donnent 85 kg finis.">?</span>
+                  </span>
                   <input id="blendLoss" inputmode="decimal" min="0" max="50" step="0.1" type="number" value="15" required />
                 </label>
                 <label>
-                  Prix de vente cible / kg fini
+                  <span class="label-with-help">
+                    Prix de vente cible / kg fini
+                    <span class="help-tip" tabindex="0" aria-label="Aide prix de vente cible" data-tooltip="Prix de vente visé au kilo torréfié. Il sert à estimer la marge de l'assemblage.">?</span>
+                  </span>
                   <input id="blendTargetPrice" inputmode="decimal" min="0" step="0.01" type="number" />
                 </label>
                 <label>
-                  Alerte si coût > / kg fini
+                  <span class="label-with-help">
+                    Alerte si coût &gt; / kg fini
+                    <span class="help-tip" tabindex="0" aria-label="Aide seuil de coût" data-tooltip="Seuil interne : l'outil signale l'assemblage si le coût calculé dépasse cette valeur.">?</span>
+                  </span>
                   <input id="blendMaxCost" inputmode="decimal" min="0" step="0.01" type="number" />
                 </label>
                 <label>
-                  Coût emballage / kg fini
+                  <span class="label-with-help">
+                    Coût emballage / kg fini
+                    <span class="help-tip" tabindex="0" aria-label="Aide coût emballage" data-tooltip="Coût moyen des sachets, étiquettes, cartons ou consommables ramené à un kilo torréfié.">?</span>
+                  </span>
                   <input id="blendPackaging" inputmode="decimal" min="0" step="0.01" type="number" value="0.55" />
                 </label>
                 <label>
-                  Coût énergie / kg fini
+                  <span class="label-with-help">
+                    Coût énergie / kg fini
+                    <span class="help-tip" tabindex="0" aria-label="Aide coût énergie" data-tooltip="Coût estimé du gaz, de l'électricité ou de l'énergie utilisée pour produire un kilo torréfié.">?</span>
+                  </span>
                   <input id="blendEnergy" inputmode="decimal" min="0" step="0.01" type="number" value="0.22" />
                 </label>
                 <label>
-                  Coût logistique / kg fini
+                  <span class="label-with-help">
+                    Coût logistique / kg fini
+                    <span class="help-tip" tabindex="0" aria-label="Aide coût logistique" data-tooltip="Coût moyen de manutention, stockage ou transport interne ramené à un kilo torréfié.">?</span>
+                  </span>
                   <input id="blendLogistics" inputmode="decimal" min="0" step="0.01" type="number" value="0.18" />
                 </label>
                 <div class="full-wide">
-                  <span class="field-label">Composition</span>
+                  <span class="field-label label-with-help">
+                    Composition
+                    <span class="help-tip" tabindex="0" aria-label="Aide composition" data-tooltip="Liste des grains utilisés dans la recette. Le total des pourcentages doit faire 100 %.">?</span>
+                  </span>
                   <div class="component-editor" id="blendComponents">
                     <div class="component-row">
                       <select class="blend-component-bean"></select>
@@ -804,7 +846,10 @@
 
               <section class="panel full-span">
                 <div class="panel-heading">
-                  <h2>Journal des imports</h2>
+                  <h2 class="heading-with-help">
+                    Journal des imports
+                    <span class="help-tip" tabindex="0" aria-label="Aide journal des imports" data-tooltip="Chaque import réussi garde une sauvegarde temporaire et peut être annulé tant qu'un autre import n'a pas été lancé.">?</span>
+                  </h2>
                   <button class="secondary" id="undoLastImport" type="button" disabled>Annuler le dernier import</button>
                 </div>
                 <div class="table-wrap">
@@ -828,7 +873,10 @@
 
               <section class="panel">
                 <div class="panel-heading">
-                  <h2>Import fournisseurs</h2>
+                  <h2 class="heading-with-help">
+                    Import fournisseurs
+                    <span class="help-tip" tabindex="0" aria-label="Aide import fournisseurs" data-tooltip="Ajoute ou met à jour les fournisseurs depuis un CSV sans effacer les champs laissés vides.">?</span>
+                  </h2>
                 </div>
                 <form class="form-grid compact" id="supplierImportForm">
                   <label class="wide">
@@ -843,7 +891,10 @@
 
               <section class="panel">
                 <div class="panel-heading">
-                  <h2>Import grains</h2>
+                  <h2 class="heading-with-help">
+                    Import grains
+                    <span class="help-tip" tabindex="0" aria-label="Aide import grains" data-tooltip="Ajoute ou met à jour les grains, crée le pays et le fournisseur si nécessaire, puis initialise le stock à zéro.">?</span>
+                  </h2>
                 </div>
                 <form class="form-grid compact" id="beanImportForm">
                   <label class="wide">
@@ -858,7 +909,10 @@
 
               <section class="panel">
                 <div class="panel-heading">
-                  <h2>Import activité N-1</h2>
+                  <h2 class="heading-with-help">
+                    Import activité N-1
+                    <span class="help-tip" tabindex="0" aria-label="Aide import activité N-1" data-tooltip="Ajoute ou remplace l'activité historique qui sert de base aux prévisions.">?</span>
+                  </h2>
                 </div>
                 <form class="form-grid compact" id="historyImportForm">
                   <label class="wide">
@@ -880,7 +934,10 @@
 
               <section class="panel">
                 <div class="panel-heading">
-                  <h2>Import tarifs</h2>
+                  <h2 class="heading-with-help">
+                    Import tarifs
+                    <span class="help-tip" tabindex="0" aria-label="Aide import tarifs" data-tooltip="Ajoute ou remplace les prix datés par grain et fournisseur.">?</span>
+                  </h2>
                 </div>
                 <form class="form-grid compact" id="priceImportForm">
                   <label class="wide">
@@ -902,7 +959,10 @@
 
               <section class="panel">
                 <div class="panel-heading">
-                  <h2>Import stocks</h2>
+                  <h2 class="heading-with-help">
+                    Import stocks
+                    <span class="help-tip" tabindex="0" aria-label="Aide import stocks" data-tooltip="Met à jour les stocks et les commandes en cours à partir d'un CSV.">?</span>
+                  </h2>
                 </div>
                 <form class="form-grid compact" id="stockImportForm">
                   <label class="wide">
