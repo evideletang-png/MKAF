@@ -325,8 +325,8 @@ const els = {
   blendPackaging: document.querySelector("#blendPackaging"),
   blendEnergy: document.querySelector("#blendEnergy"),
   blendLogistics: document.querySelector("#blendLogistics"),
-  blendComponentBeans: document.querySelectorAll(".blend-component-bean"),
-  blendComponentPercentages: document.querySelectorAll(".blend-component-percentage"),
+  blendComponents: document.querySelector("#blendComponents"),
+  addBlendComponent: document.querySelector("#addBlendComponent"),
   blendRows: document.querySelector("#blendRows"),
   stockForm: document.querySelector("#stockForm"),
   stockBean: document.querySelector("#stockBean"),
@@ -513,6 +513,18 @@ function optionalNumberValue(input) {
 
 function emptyTableRow(colspan, label = "Aucune donnée") {
   return `<tr><td colspan="${colspan}">${escapeHtml(label)}</td></tr>`;
+}
+
+function blendComponentRows() {
+  return [...els.blendComponents.querySelectorAll(".component-row")];
+}
+
+function blendComponentBeanSelects() {
+  return [...els.blendComponents.querySelectorAll(".blend-component-bean")];
+}
+
+function blendComponentPercentageInputs() {
+  return [...els.blendComponents.querySelectorAll(".blend-component-percentage")];
 }
 
 function getStock(beanId) {
@@ -975,8 +987,10 @@ function renderSelects() {
   els.beanSupplier.innerHTML = supplierOptions;
   els.stockBean.innerHTML = beanOptions;
   els.historyBlend.innerHTML = blendOptions;
-  els.blendComponentBeans.forEach((select) => {
+  blendComponentBeanSelects().forEach((select) => {
+    const currentValue = select.value;
     select.innerHTML = beanOptionsWithBlank;
+    if (currentValue) select.value = currentValue;
   });
 }
 
@@ -1620,11 +1634,44 @@ async function addBean(event) {
   renderAll();
 }
 
+function createBlendComponentRow() {
+  const row = document.createElement("div");
+  row.className = "component-row";
+  row.innerHTML = `
+    <select class="blend-component-bean"></select>
+    <input class="blend-component-percentage" inputmode="decimal" min="0" max="100" step="0.1" type="number" placeholder="%" />
+    <button class="secondary component-remove" type="button">Retirer</button>
+  `;
+  els.blendComponents.append(row);
+  renderSelects();
+}
+
+function resetBlendComponentRows() {
+  els.blendComponents.innerHTML = `
+    <div class="component-row">
+      <select class="blend-component-bean"></select>
+      <input class="blend-component-percentage" inputmode="decimal" min="0" max="100" step="0.1" type="number" placeholder="%" />
+      <button class="secondary component-remove" type="button" hidden>Retirer</button>
+    </div>
+  `;
+  renderSelects();
+}
+
+function removeBlendComponentRow(event) {
+  const button = event.target.closest(".component-remove");
+  if (!button) return;
+
+  const row = button.closest(".component-row");
+  if (!row || blendComponentRows().length <= 1) return;
+  row.remove();
+}
+
 function collectBlendComponents() {
   const components = [];
 
-  els.blendComponentBeans.forEach((select, index) => {
-    const percentageInput = els.blendComponentPercentages[index];
+  blendComponentRows().forEach((row) => {
+    const select = row.querySelector(".blend-component-bean");
+    const percentageInput = row.querySelector(".blend-component-percentage");
     const hasBean = Boolean(select.value);
     const hasPercentage = percentageInput.value !== "";
 
@@ -1692,6 +1739,7 @@ async function addBlend(event) {
   els.blendPackaging.value = "0.55";
   els.blendEnergy.value = "0.22";
   els.blendLogistics.value = "0.18";
+  resetBlendComponentRows();
   renderAll();
 }
 
@@ -1887,6 +1935,8 @@ els.countryForm.addEventListener("submit", addCountry);
 els.supplierForm.addEventListener("submit", addSupplier);
 els.beanForm.addEventListener("submit", addBean);
 els.blendForm.addEventListener("submit", addBlend);
+els.addBlendComponent.addEventListener("click", createBlendComponentRow);
+els.blendComponents.addEventListener("click", removeBlendComponentRow);
 els.stockForm.addEventListener("submit", updateStock);
 els.historyForm.addEventListener("submit", addHistoricalOrder);
 els.priceForm.addEventListener("submit", addPrice);

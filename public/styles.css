@@ -421,8 +421,16 @@ select:focus {
 
 .component-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px;
+  grid-template-columns: minmax(0, 1fr) 120px auto;
   gap: 10px;
+}
+
+.add-component {
+  margin-top: 10px;
+}
+
+.component-remove[hidden] {
+  display: none;
 }
 
 .align-end {
