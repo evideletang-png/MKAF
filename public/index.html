@@ -21,7 +21,7 @@
 
         <nav class="nav-tabs" aria-label="Sections">
           <button class="nav-tab active" data-view="dashboard" type="button">Tableau de bord</button>
-          <button class="nav-tab" data-view="prices" type="button">Tarifs dates</button>
+          <button class="nav-tab" data-view="prices" type="button">Appro & coûts</button>
           <button class="nav-tab" data-view="calculator" type="button">Calculateur</button>
           <button class="nav-tab" data-view="forecast" type="button">Prévisions</button>
           <button class="nav-tab" data-view="production" type="button">Production</button>
@@ -63,42 +63,124 @@
         <section class="view" id="prices">
           <section class="panel">
             <div class="panel-heading">
-              <h2>Ajouter un tarif négocié</h2>
+              <h2>Saisie rapide approvisionnement</h2>
             </div>
-            <form class="form-grid" id="priceForm">
+            <form class="form-grid supply-form" id="quickPurchaseForm">
+              <label>
+                Date d'effet
+                <input id="quickPurchaseDate" type="date" required />
+              </label>
               <label>
                 Grain
-                <select id="priceBean" required></select>
+                <input id="quickPurchaseBean" list="quickBeanOptions" type="text" placeholder="Brésil Santos" required />
+              </label>
+              <label>
+                Pays
+                <input id="quickPurchaseCountry" list="quickCountryOptions" type="text" placeholder="Brésil" required />
               </label>
               <label>
                 Fournisseur
-                <select id="priceSupplier" required></select>
+                <input id="quickPurchaseSupplier" list="quickSupplierOptions" type="text" placeholder="Importateur..." required />
               </label>
               <label>
-                Prix / kg
-                <input id="priceValue" inputmode="decimal" min="0.01" step="0.01" type="number" required />
+                Prix rendu / kg
+                <input id="quickPurchasePrice" inputmode="decimal" min="0.01" step="0.01" type="number" required />
               </label>
               <label>
                 Devise
-                <select id="priceCurrency" required>
+                <select id="quickPurchaseCurrency" required>
                   <option>EUR</option>
                   <option>USD</option>
                 </select>
               </label>
               <label>
-                Valable du
-                <input id="priceFrom" type="date" required />
+                Stock actuel kg
+                <input id="quickPurchaseStock" inputmode="decimal" min="0" step="0.1" type="number" placeholder="Optionnel" />
               </label>
               <label>
-                Valable au
-                <input id="priceTo" type="date" />
+                Commande en cours kg
+                <input id="quickPurchaseIncoming" inputmode="decimal" min="0" step="0.1" type="number" placeholder="Optionnel" />
+              </label>
+              <label>
+                ETA
+                <input id="quickPurchaseEta" type="date" />
+              </label>
+              <label>
+                Tarif valable jusqu'au
+                <input id="quickPurchaseValidTo" type="date" />
               </label>
               <label class="wide">
-                Commentaire
-                <input id="priceNotes" type="text" placeholder="Contrat, négociation, estimation..." />
+                Note
+                <input id="quickPurchaseNotes" type="text" placeholder="Contrat, container, remarque fournisseur..." />
               </label>
-              <button class="primary align-end" type="submit">Ajouter le tarif</button>
+              <button class="primary align-end" type="submit">Enregistrer l'appro</button>
             </form>
+            <datalist id="quickBeanOptions"></datalist>
+            <datalist id="quickCountryOptions"></datalist>
+            <datalist id="quickSupplierOptions"></datalist>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Situation appro & coûts</h2>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Grain</th>
+                    <th>Pays</th>
+                    <th>Fournisseur</th>
+                    <th class="numeric">Dernier coût</th>
+                    <th class="numeric">Stock</th>
+                    <th class="numeric">Commande</th>
+                    <th>ETA</th>
+                    <th>Risque</th>
+                  </tr>
+                </thead>
+                <tbody id="supplyRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <details class="panel-details">
+              <summary>Tarif avancé par date</summary>
+              <form class="form-grid nested-grid" id="priceForm">
+                <label>
+                  Grain
+                  <select id="priceBean" required></select>
+                </label>
+                <label>
+                  Fournisseur
+                  <select id="priceSupplier" required></select>
+                </label>
+                <label>
+                  Prix / kg
+                  <input id="priceValue" inputmode="decimal" min="0.01" step="0.01" type="number" required />
+                </label>
+                <label>
+                  Devise
+                  <select id="priceCurrency" required>
+                    <option>EUR</option>
+                    <option>USD</option>
+                  </select>
+                </label>
+                <label>
+                  Valable du
+                  <input id="priceFrom" type="date" required />
+                </label>
+                <label>
+                  Valable au
+                  <input id="priceTo" type="date" />
+                </label>
+                <label class="wide">
+                  Commentaire
+                  <input id="priceNotes" type="text" placeholder="Contrat, négociation, estimation..." />
+                </label>
+                <button class="primary align-end" type="submit">Ajouter le tarif</button>
+              </form>
+            </details>
           </section>
 
           <section class="panel">
@@ -404,65 +486,70 @@
                   <select id="beanSupplier" required></select>
                 </label>
                 <label>
-                  Type
-                  <input id="beanSpecies" type="text" placeholder="arabica, robusta..." />
-                </label>
-                <label>
-                  Process
-                  <input id="beanProcess" type="text" placeholder="lavé, naturel, honey..." />
-                </label>
-                <label>
-                  Région
-                  <input id="beanRegion" type="text" placeholder="Cerrado, Sidamo..." />
-                </label>
-                <label>
-                  Variété
-                  <input id="beanVariety" type="text" placeholder="Bourbon, Caturra..." />
-                </label>
-                <label>
-                  Récolte
-                  <input id="beanHarvestYear" inputmode="numeric" min="2000" max="2100" step="1" type="number" />
-                </label>
-                <label>
-                  Container
-                  <input id="beanContainer" type="text" placeholder="ABC123" />
-                </label>
-                <label>
-                  Date arrivée
-                  <input id="beanArrivalDate" type="date" />
-                </label>
-                <label>
-                  Altitude m
-                  <input id="beanAltitude" inputmode="numeric" min="0" step="1" type="number" />
-                </label>
-                <label>
-                  Score SCA
-                  <input id="beanScaScore" inputmode="decimal" min="0" max="100" step="0.1" type="number" />
-                </label>
-                <label>
-                  Humidité %
-                  <input id="beanMoisture" inputmode="decimal" min="0" max="100" step="0.1" type="number" />
-                </label>
-                <label>
-                  Densité
-                  <input id="beanDensity" inputmode="decimal" min="0" step="0.1" type="number" />
-                </label>
-                <label>
-                  Calibre
-                  <input id="beanScreenSize" type="text" placeholder="17/18" />
-                </label>
-                <label>
                   Coût rendu / kg
                   <input id="beanLandedCost" inputmode="decimal" min="0" step="0.01" type="number" />
                 </label>
-                <label>
-                  Emplacement
-                  <input id="beanLocation" type="text" placeholder="Dépôt A - Rack 3" />
-                </label>
-                <label class="wide">
-                  Analyses / qualité
-                  <input id="beanQualityNotes" type="text" placeholder="Défauts, photos, historique qualité..." />
-                </label>
+                <details class="advanced-fields full-wide">
+                  <summary>Qualité et traçabilité avancées</summary>
+                  <div class="form-grid nested-grid">
+                    <label>
+                      Type
+                      <input id="beanSpecies" type="text" placeholder="arabica, robusta..." />
+                    </label>
+                    <label>
+                      Process
+                      <input id="beanProcess" type="text" placeholder="lavé, naturel, honey..." />
+                    </label>
+                    <label>
+                      Région
+                      <input id="beanRegion" type="text" placeholder="Cerrado, Sidamo..." />
+                    </label>
+                    <label>
+                      Variété
+                      <input id="beanVariety" type="text" placeholder="Bourbon, Caturra..." />
+                    </label>
+                    <label>
+                      Récolte
+                      <input id="beanHarvestYear" inputmode="numeric" min="2000" max="2100" step="1" type="number" />
+                    </label>
+                    <label>
+                      Container
+                      <input id="beanContainer" type="text" placeholder="ABC123" />
+                    </label>
+                    <label>
+                      Date arrivée
+                      <input id="beanArrivalDate" type="date" />
+                    </label>
+                    <label>
+                      Altitude m
+                      <input id="beanAltitude" inputmode="numeric" min="0" step="1" type="number" />
+                    </label>
+                    <label>
+                      Score SCA
+                      <input id="beanScaScore" inputmode="decimal" min="0" max="100" step="0.1" type="number" />
+                    </label>
+                    <label>
+                      Humidité %
+                      <input id="beanMoisture" inputmode="decimal" min="0" max="100" step="0.1" type="number" />
+                    </label>
+                    <label>
+                      Densité
+                      <input id="beanDensity" inputmode="decimal" min="0" step="0.1" type="number" />
+                    </label>
+                    <label>
+                      Calibre
+                      <input id="beanScreenSize" type="text" placeholder="17/18" />
+                    </label>
+                    <label>
+                      Emplacement
+                      <input id="beanLocation" type="text" placeholder="Dépôt A - Rack 3" />
+                    </label>
+                    <label class="wide">
+                      Analyses / qualité
+                      <input id="beanQualityNotes" type="text" placeholder="Défauts, photos, historique qualité..." />
+                    </label>
+                  </div>
+                </details>
                 <button class="primary align-end" type="submit">Ajouter le grain</button>
               </form>
               <div id="beanRows" class="table-wrap spaced"></div>

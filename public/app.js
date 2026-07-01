@@ -311,6 +311,22 @@ const els = {
   priceNotes: document.querySelector("#priceNotes"),
   priceRows: document.querySelector("#priceRows"),
   priceRowsCount: document.querySelector("#priceRowsCount"),
+  quickPurchaseForm: document.querySelector("#quickPurchaseForm"),
+  quickPurchaseDate: document.querySelector("#quickPurchaseDate"),
+  quickPurchaseBean: document.querySelector("#quickPurchaseBean"),
+  quickPurchaseCountry: document.querySelector("#quickPurchaseCountry"),
+  quickPurchaseSupplier: document.querySelector("#quickPurchaseSupplier"),
+  quickPurchasePrice: document.querySelector("#quickPurchasePrice"),
+  quickPurchaseCurrency: document.querySelector("#quickPurchaseCurrency"),
+  quickPurchaseStock: document.querySelector("#quickPurchaseStock"),
+  quickPurchaseIncoming: document.querySelector("#quickPurchaseIncoming"),
+  quickPurchaseEta: document.querySelector("#quickPurchaseEta"),
+  quickPurchaseValidTo: document.querySelector("#quickPurchaseValidTo"),
+  quickPurchaseNotes: document.querySelector("#quickPurchaseNotes"),
+  quickBeanOptions: document.querySelector("#quickBeanOptions"),
+  quickCountryOptions: document.querySelector("#quickCountryOptions"),
+  quickSupplierOptions: document.querySelector("#quickSupplierOptions"),
+  supplyRows: document.querySelector("#supplyRows"),
   calculatorForm: document.querySelector("#calculatorForm"),
   calcBlend: document.querySelector("#calcBlend"),
   calcDate: document.querySelector("#calcDate"),
@@ -582,6 +598,94 @@ function createId(prefix, label) {
   return `${prefix}-${suffix}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
+function findByName(collection, fieldName, value) {
+  const key = normalizeKey(value);
+  if (!key) return null;
+  return state[collection].find((item) => normalizeKey(item[fieldName]) === key) || null;
+}
+
+function ensureCountry(name) {
+  const cleanName = name.trim();
+  const existing = findByName("countries", "name", cleanName);
+  if (existing) return existing;
+
+  const country = {
+    id: createId("country", cleanName),
+    name: cleanName,
+    region: ""
+  };
+
+  state.countries.push(country);
+  state.countries.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  return country;
+}
+
+function ensureSupplier(name, currency = "EUR") {
+  const cleanName = name.trim();
+  const existing = findByName("suppliers", "name", cleanName);
+  if (existing) {
+    existing.defaultCurrency = existing.defaultCurrency || currency;
+    return existing;
+  }
+
+  const supplier = {
+    id: createId("supplier", cleanName),
+    name: cleanName,
+    defaultCurrency: currency,
+    averageLeadTimeDays: null,
+    reliabilityPct: null,
+    incoterms: "",
+    paymentTerms: "",
+    certifications: ""
+  };
+
+  state.suppliers.push(supplier);
+  state.suppliers.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  return supplier;
+}
+
+function ensureBean(commercialName, countryId, supplierId, landedCostPerKg) {
+  const cleanName = commercialName.trim();
+  const existing = findByName("beans", "commercialName", cleanName);
+
+  if (existing) {
+    existing.countryId = countryId || existing.countryId;
+    existing.defaultSupplierId = supplierId || existing.defaultSupplierId;
+    existing.landedCostPerKg = landedCostPerKg;
+    if (!state.greenStocks.some((stock) => stock.beanId === existing.id)) {
+      state.greenStocks.push({ beanId: existing.id, quantityKg: 0, incomingKg: 0, eta: "" });
+    }
+    return existing;
+  }
+
+  const bean = {
+    id: createId("bean", cleanName),
+    commercialName: cleanName,
+    countryId,
+    defaultSupplierId: supplierId,
+    species: "arabica",
+    process: "",
+    region: "",
+    variety: "",
+    harvestYear: null,
+    container: "",
+    arrivalDate: "",
+    altitudeM: null,
+    scaScore: null,
+    moisturePct: null,
+    density: null,
+    screenSize: "",
+    landedCostPerKg,
+    location: "",
+    qualityNotes: ""
+  };
+
+  state.beans.push(bean);
+  state.beans.sort((a, b) => a.commercialName.localeCompare(b.commercialName, "fr"));
+  state.greenStocks.push({ beanId: bean.id, quantityKg: 0, incomingKg: 0, eta: "" });
+  return bean;
+}
+
 function numberValue(input, fallback = 0) {
   const value = Number(input.value);
   return Number.isFinite(value) ? value : fallback;
@@ -615,6 +719,39 @@ function getStock(beanId) {
     incomingKg: 0,
     eta: ""
   };
+}
+
+function upsertStockSnapshot(beanId, quantityKg, incomingKg, eta) {
+  const existing = state.greenStocks.find((stock) => stock.beanId === beanId);
+  const hasQuantity = Number.isFinite(quantityKg);
+  const hasIncoming = Number.isFinite(incomingKg);
+
+  if (existing) {
+    if (hasQuantity) existing.quantityKg = quantityKg;
+    if (hasIncoming) existing.incomingKg = incomingKg;
+    if (eta) existing.eta = eta;
+    return existing;
+  }
+
+  const stock = {
+    beanId,
+    quantityKg: hasQuantity ? quantityKg : 0,
+    incomingKg: hasIncoming ? incomingKg : 0,
+    eta: eta || ""
+  };
+
+  state.greenStocks.push(stock);
+  return stock;
+}
+
+function getLatestPrice(beanId) {
+  return state.prices
+    .filter((price) => price.beanId === beanId)
+    .sort((a, b) => {
+      const dateCompare = b.validFrom.localeCompare(a.validFrom);
+      if (dateCompare !== 0) return dateCompare;
+      return b.id.localeCompare(a.id);
+    })[0] || null;
 }
 
 function getHistoricalGreenUsage(beanId) {
@@ -1050,16 +1187,28 @@ function renderSelects() {
     .map((bean) => `<option value="${escapeHtml(bean.id)}">${escapeHtml(bean.commercialName)}</option>`)
     .join("");
   const beanOptionsWithBlank = `<option value="">Choisir un grain</option>${beanOptions}`;
+  const beanDatalistOptions = state.beans
+    .map((bean) => `<option value="${escapeHtml(bean.commercialName)}"></option>`)
+    .join("");
   const supplierOptions = state.suppliers
     .map((supplier) => `<option value="${escapeHtml(supplier.id)}">${escapeHtml(supplier.name)}</option>`)
     .join("");
+  const supplierDatalistOptions = state.suppliers
+    .map((supplier) => `<option value="${escapeHtml(supplier.name)}"></option>`)
+    .join("");
   const countryOptions = state.countries
     .map((country) => `<option value="${escapeHtml(country.id)}">${escapeHtml(country.name)}</option>`)
+    .join("");
+  const countryDatalistOptions = state.countries
+    .map((country) => `<option value="${escapeHtml(country.name)}"></option>`)
     .join("");
   const blendOptions = state.blends
     .map((blend) => `<option value="${escapeHtml(blend.id)}">${escapeHtml(blend.name)}</option>`)
     .join("");
 
+  els.quickBeanOptions.innerHTML = beanDatalistOptions;
+  els.quickCountryOptions.innerHTML = countryDatalistOptions;
+  els.quickSupplierOptions.innerHTML = supplierDatalistOptions;
   els.priceBean.innerHTML = beanOptions;
   els.priceSupplier.innerHTML = supplierOptions;
   els.calcBlend.innerHTML = blendOptions;
@@ -1150,6 +1299,41 @@ function renderBlendCards() {
       `;
     })
     .join("");
+}
+
+function renderSupplyOverview() {
+  els.supplyRows.innerHTML = state.beans.length
+    ? state.beans
+        .map((bean) => {
+          const country = getById("countries", bean.countryId);
+          const supplier = getById("suppliers", bean.defaultSupplierId);
+          const latestPrice = getLatestPrice(bean.id);
+          const stockInfo = getStockInfo(bean);
+          const statusClass = stockInfo.risk
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, "-");
+          const landedCost = toFiniteNumber(bean.landedCostPerKg);
+          const costLabel = latestPrice
+            ? formatMoney(latestPrice.pricePerKg, latestPrice.currency)
+            : formatMoney(landedCost);
+
+          return `
+            <tr>
+              <td>${escapeHtml(bean.commercialName)}</td>
+              <td>${escapeHtml(country?.name || "-")}</td>
+              <td>${escapeHtml(supplier?.name || "-")}</td>
+              <td class="numeric">${escapeHtml(costLabel)}</td>
+              <td class="numeric">${escapeHtml(formatKg(stockInfo.quantityKg))}</td>
+              <td class="numeric">${escapeHtml(formatKg(stockInfo.incomingKg))}</td>
+              <td>${escapeHtml(stockInfo.eta || "-")}</td>
+              <td><span class="status-pill ${escapeHtml(statusClass)}">${escapeHtml(stockInfo.risk)}</span></td>
+            </tr>
+          `;
+        })
+        .join("")
+    : emptyTableRow(8);
 }
 
 function renderPrices() {
@@ -1589,6 +1773,7 @@ function renderAll() {
   renderMetrics();
   renderAlerts();
   renderBlendCards();
+  renderSupplyOverview();
   renderPrices();
   renderForecast();
   renderBatches();
@@ -1602,6 +1787,7 @@ function setupDefaults() {
   };
 
   els.priceFrom.value = today;
+  els.quickPurchaseDate.value = today;
   els.calcDate.value = "2026-02-15";
   els.compareDate.value = "2026-01-15";
   els.forecastStart.value = forecastSettings.startDate;
@@ -1883,6 +2069,72 @@ async function addHistoricalOrder(event) {
   renderAll();
 }
 
+async function addQuickPurchase(event) {
+  event.preventDefault();
+
+  const date = els.quickPurchaseDate.value;
+  const beanName = els.quickPurchaseBean.value.trim();
+  const countryName = els.quickPurchaseCountry.value.trim();
+  const supplierName = els.quickPurchaseSupplier.value.trim();
+  const pricePerKg = numberValue(els.quickPurchasePrice, NaN);
+  const validTo = els.quickPurchaseValidTo.value || null;
+  const quantityKg = optionalNumberValue(els.quickPurchaseStock);
+  const incomingKg = optionalNumberValue(els.quickPurchaseIncoming);
+
+  if (!date || !beanName || !countryName || !supplierName) {
+    window.alert("Renseigne au minimum la date, le grain, le pays et le fournisseur.");
+    return;
+  }
+
+  if (!Number.isFinite(pricePerKg) || pricePerKg <= 0) {
+    window.alert("Le prix rendu / kg doit être supérieur à 0.");
+    return;
+  }
+
+  if (validTo && validTo < date) {
+    window.alert("La date de fin du tarif doit être après la date d'effet.");
+    return;
+  }
+
+  const country = ensureCountry(countryName);
+  const supplier = ensureSupplier(supplierName, els.quickPurchaseCurrency.value);
+  const bean = ensureBean(beanName, country.id, supplier.id, pricePerKg);
+  const notes = els.quickPurchaseNotes.value.trim();
+
+  const existingPrice = state.prices.find((price) => {
+    return (
+      price.beanId === bean.id &&
+      price.supplierId === supplier.id &&
+      price.validFrom === date &&
+      (price.validTo || null) === validTo
+    );
+  });
+
+  if (existingPrice) {
+    existingPrice.pricePerKg = pricePerKg;
+    existingPrice.currency = els.quickPurchaseCurrency.value;
+    existingPrice.notes = notes;
+  } else {
+    state.prices.unshift({
+      id: `price-${crypto.randomUUID()}`,
+      beanId: bean.id,
+      supplierId: supplier.id,
+      pricePerKg,
+      currency: els.quickPurchaseCurrency.value,
+      validFrom: date,
+      validTo,
+      notes
+    });
+  }
+
+  upsertStockSnapshot(bean.id, quantityKg, incomingKg, els.quickPurchaseEta.value);
+
+  await saveState();
+  els.quickPurchaseForm.reset();
+  els.quickPurchaseDate.value = today;
+  renderAll();
+}
+
 async function addPrice(event) {
   event.preventDefault();
 
@@ -2102,6 +2354,7 @@ els.addBlendComponent.addEventListener("click", createBlendComponentRow);
 els.blendComponents.addEventListener("click", removeBlendComponentRow);
 els.stockForm.addEventListener("submit", updateStock);
 els.historyForm.addEventListener("submit", addHistoricalOrder);
+els.quickPurchaseForm.addEventListener("submit", addQuickPurchase);
 els.priceForm.addEventListener("submit", addPrice);
 els.calculatorForm.addEventListener("submit", runCalculator);
 els.forecastForm.addEventListener("submit", runForecast);

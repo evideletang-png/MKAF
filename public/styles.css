@@ -404,6 +404,10 @@ h3 {
   align-items: end;
 }
 
+.form-grid.supply-form {
+  align-items: end;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -435,6 +439,28 @@ select:focus {
 
 .full-wide {
   grid-column: 1 / -1;
+}
+
+.advanced-fields {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.advanced-fields summary {
+  color: var(--accent-dark);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.panel-details summary {
+  color: var(--accent-dark);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.nested-grid {
+  margin-top: 14px;
 }
 
 .field-label {
