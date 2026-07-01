@@ -294,6 +294,31 @@ h3 {
   font-weight: 800;
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eef7ef;
+  color: #2f6a3b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.status-pill.surveiller,
+.status-pill.a-qualifier {
+  background: #fff7ea;
+  color: var(--accent-dark);
+}
+
+.status-pill.rupture {
+  background: #fff1f1;
+  color: var(--danger);
+}
+
 .stack {
   display: grid;
   gap: 10px;

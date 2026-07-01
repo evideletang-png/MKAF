@@ -1,19 +1,22 @@
 # Outil coût café torréfacteur
 
-Prototype interne Max Cafés pour suivre les tarifs datés des grains, calculer le coût des assemblages, prévoir les commandes et figer le coût des batchs de production.
+Prototype interne Max Cafés pour piloter les grains, les fournisseurs, les assemblages, les stocks et la production d'un métier d'assembleur / transformateur.
 
 ## Fonctionnalités de la V0
 
 - Catalogue de grains et fournisseurs de démonstration.
 - Création de pays producteurs, fournisseurs, grains, assemblages, stocks et lignes d'activité N-1 depuis l'interface.
+- Fiches grains enrichies : origine, région, variété, récolte, container, arrivée, altitude, score SCA, humidité, densité, calibre, coût rendu entrepôt, emplacement et notes qualité.
+- Fiches fournisseurs enrichies : délai moyen, fiabilité, Incoterms, conditions de paiement et certifications.
 - Saisie de tarifs datés par grain et fournisseur.
 - Calcul du coût d'un assemblage à une date donnée.
 - Comparaison du coût entre deux dates.
 - Estimation de commandes par rapport à l'activité N-1 jour par jour.
 - Facteurs de prévision : croissance, saisonnalité, événements, météo, promos et stock de sécurité.
 - Conversion de la demande prévue en besoin de café vert par grain.
-- Alertes simples sur prix manquant, coût trop élevé et tarif bientôt expiré.
-- Création de batchs de production avec coût figé.
+- Stocks intelligents : consommation moyenne, autonomie, commande en cours, ETA, risque de rupture et valeur immobilisée.
+- Alertes sur prix manquant, coût trop élevé, tarif bientôt expiré, autonomie courte, humidité élevée, score SCA faible et fiabilité fournisseur basse.
+- Création de batchs de production avec coût figé, machine, opérateur, perte réelle et notes de courbe.
 - Sauvegarde PostgreSQL sur Railway via `DATABASE_URL`.
 - Sauvegarde locale dans le navigateur en mode secours si aucune base n'est configurée.
 

@@ -60,8 +60,26 @@ const seedState = {
     { id: "country-et", name: "Éthiopie", region: "Afrique" }
   ],
   suppliers: [
-    { id: "supplier-a", name: "Importateur A", defaultCurrency: "EUR" },
-    { id: "supplier-b", name: "Importateur B", defaultCurrency: "EUR" }
+    {
+      id: "supplier-a",
+      name: "Importateur A",
+      defaultCurrency: "EUR",
+      averageLeadTimeDays: 28,
+      reliabilityPct: 94,
+      incoterms: "CIF",
+      paymentTerms: "30 jours",
+      certifications: "Bio sur demande"
+    },
+    {
+      id: "supplier-b",
+      name: "Importateur B",
+      defaultCurrency: "EUR",
+      averageLeadTimeDays: 35,
+      reliabilityPct: 88,
+      incoterms: "FOB",
+      paymentTerms: "Acompte + solde livraison",
+      certifications: "Rainforest"
+    }
   ],
   beans: [
     {
@@ -70,7 +88,20 @@ const seedState = {
       countryId: "country-br",
       defaultSupplierId: "supplier-a",
       species: "arabica",
-      process: "naturel"
+      process: "naturel",
+      region: "Santos",
+      variety: "Mundo Novo",
+      harvestYear: 2026,
+      container: "BR-ABC123",
+      arrivalDate: "2026-01-12",
+      altitudeM: 950,
+      scaScore: 82.5,
+      moisturePct: 10.8,
+      density: 690,
+      screenSize: "17/18",
+      landedCostPerKg: 5.95,
+      location: "Dépôt A - Rack 1",
+      qualityNotes: "Lot stable, profil chocolat/noisette."
     },
     {
       id: "bean-colombie-excelso",
@@ -78,7 +109,20 @@ const seedState = {
       countryId: "country-co",
       defaultSupplierId: "supplier-b",
       species: "arabica",
-      process: "lavé"
+      process: "lavé",
+      region: "Huila",
+      variety: "Caturra",
+      harvestYear: 2026,
+      container: "CO-EX456",
+      arrivalDate: "2026-01-20",
+      altitudeM: 1600,
+      scaScore: 84,
+      moisturePct: 10.5,
+      density: 715,
+      screenSize: "16+",
+      landedCostPerKg: 7.45,
+      location: "Dépôt A - Rack 2",
+      qualityNotes: "Bonne sucrosité, acidité moyenne."
     },
     {
       id: "bean-ethiopie-sidamo",
@@ -86,7 +130,20 @@ const seedState = {
       countryId: "country-et",
       defaultSupplierId: "supplier-b",
       species: "arabica",
-      process: "lavé"
+      process: "lavé",
+      region: "Sidamo",
+      variety: "Heirloom",
+      harvestYear: 2026,
+      container: "ET-SD789",
+      arrivalDate: "2026-02-03",
+      altitudeM: 1900,
+      scaScore: 86,
+      moisturePct: 10.2,
+      density: 730,
+      screenSize: "15+",
+      landedCostPerKg: 8.25,
+      location: "Dépôt B - Rack 1",
+      qualityNotes: "Floral, agrumes, très bon niveau tasse."
     }
   ],
   prices: [
@@ -164,9 +221,9 @@ const seedState = {
   ],
   batches: [],
   greenStocks: [
-    { beanId: "bean-bresil-santos", quantityKg: 115 },
-    { beanId: "bean-colombie-excelso", quantityKg: 82 },
-    { beanId: "bean-ethiopie-sidamo", quantityKg: 54 }
+    { beanId: "bean-bresil-santos", quantityKg: 115, incomingKg: 250, eta: "2026-08-12" },
+    { beanId: "bean-colombie-excelso", quantityKg: 82, incomingKg: 0, eta: "" },
+    { beanId: "bean-ethiopie-sidamo", quantityKg: 54, incomingKg: 0, eta: "" }
   ],
   historicalOrders: buildHistoricalOrders(),
   forecastSettings: {
@@ -223,6 +280,9 @@ const els = {
   batchDate: document.querySelector("#batchDate"),
   batchQuantity: document.querySelector("#batchQuantity"),
   batchLoss: document.querySelector("#batchLoss"),
+  batchMachine: document.querySelector("#batchMachine"),
+  batchOperator: document.querySelector("#batchOperator"),
+  batchCurve: document.querySelector("#batchCurve"),
   batchRows: document.querySelector("#batchRows"),
   countryForm: document.querySelector("#countryForm"),
   countryName: document.querySelector("#countryName"),
@@ -231,6 +291,11 @@ const els = {
   supplierForm: document.querySelector("#supplierForm"),
   supplierName: document.querySelector("#supplierName"),
   supplierCurrency: document.querySelector("#supplierCurrency"),
+  supplierLeadTime: document.querySelector("#supplierLeadTime"),
+  supplierReliability: document.querySelector("#supplierReliability"),
+  supplierIncoterms: document.querySelector("#supplierIncoterms"),
+  supplierPaymentTerms: document.querySelector("#supplierPaymentTerms"),
+  supplierCertifications: document.querySelector("#supplierCertifications"),
   supplierRows: document.querySelector("#supplierRows"),
   beanForm: document.querySelector("#beanForm"),
   beanName: document.querySelector("#beanName"),
@@ -238,6 +303,19 @@ const els = {
   beanSupplier: document.querySelector("#beanSupplier"),
   beanSpecies: document.querySelector("#beanSpecies"),
   beanProcess: document.querySelector("#beanProcess"),
+  beanRegion: document.querySelector("#beanRegion"),
+  beanVariety: document.querySelector("#beanVariety"),
+  beanHarvestYear: document.querySelector("#beanHarvestYear"),
+  beanContainer: document.querySelector("#beanContainer"),
+  beanArrivalDate: document.querySelector("#beanArrivalDate"),
+  beanAltitude: document.querySelector("#beanAltitude"),
+  beanScaScore: document.querySelector("#beanScaScore"),
+  beanMoisture: document.querySelector("#beanMoisture"),
+  beanDensity: document.querySelector("#beanDensity"),
+  beanScreenSize: document.querySelector("#beanScreenSize"),
+  beanLandedCost: document.querySelector("#beanLandedCost"),
+  beanLocation: document.querySelector("#beanLocation"),
+  beanQualityNotes: document.querySelector("#beanQualityNotes"),
   beanRows: document.querySelector("#beanRows"),
   blendForm: document.querySelector("#blendForm"),
   blendName: document.querySelector("#blendName"),
@@ -253,6 +331,8 @@ const els = {
   stockForm: document.querySelector("#stockForm"),
   stockBean: document.querySelector("#stockBean"),
   stockQuantity: document.querySelector("#stockQuantity"),
+  stockIncoming: document.querySelector("#stockIncoming"),
+  stockEta: document.querySelector("#stockEta"),
   stockRows: document.querySelector("#stockRows"),
   historyForm: document.querySelector("#historyForm"),
   historyDate: document.querySelector("#historyDate"),
@@ -381,6 +461,18 @@ function formatKg(value) {
   return `${value.toFixed(1).replace(".", ",")} kg`;
 }
 
+function toFiniteNumber(value) {
+  if (value === null || value === undefined || value === "") return NaN;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : NaN;
+}
+
+function formatDays(value) {
+  if (!Number.isFinite(value)) return "-";
+  if (value > 365) return "> 1 an";
+  return `${Math.round(value)} j`;
+}
+
 function getById(collection, id) {
   return state[collection].find((item) => item.id === id);
 }
@@ -414,8 +506,100 @@ function numberValue(input, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function optionalNumberValue(input) {
+  const value = Number(input.value);
+  return Number.isFinite(value) && input.value !== "" ? value : null;
+}
+
 function emptyTableRow(colspan, label = "Aucune donnée") {
   return `<tr><td colspan="${colspan}">${escapeHtml(label)}</td></tr>`;
+}
+
+function getStock(beanId) {
+  return state.greenStocks.find((stock) => stock.beanId === beanId) || {
+    beanId,
+    quantityKg: 0,
+    incomingKg: 0,
+    eta: ""
+  };
+}
+
+function getHistoricalGreenUsage(beanId) {
+  const usageByDate = new Map();
+
+  (state.historicalOrders || []).forEach((order) => {
+    const blend = getById("blends", order.blendId);
+    if (!blend) return;
+
+    const component = blend.components.find((item) => item.beanId === beanId);
+    if (!component) return;
+
+    const greenKg = Number(order.roastedKg || 0) / (1 - Number(blend.roastLossPct || 0) / 100);
+    const beanKg = greenKg * (Number(component.percentage || 0) / 100);
+    usageByDate.set(order.date, (usageByDate.get(order.date) || 0) + beanKg);
+  });
+
+  const dailyValues = [...usageByDate.values()];
+  const totalKg = dailyValues.reduce((sum, value) => sum + value, 0);
+
+  return {
+    totalKg,
+    activeDays: dailyValues.length,
+    averageDailyKg: dailyValues.length > 0 ? totalKg / dailyValues.length : 0
+  };
+}
+
+function getStockInfo(bean) {
+  const stock = getStock(bean.id);
+  const usage = getHistoricalGreenUsage(bean.id);
+  const quantityKg = Number(stock.quantityKg || 0);
+  const incomingKg = Number(stock.incomingKg || 0);
+  const averageDailyKg = usage.averageDailyKg;
+  const autonomyDays = averageDailyKg > 0 ? quantityKg / averageDailyKg : null;
+  const landedCost = toFiniteNumber(bean.landedCostPerKg);
+  const stockValue = landedCost > 0 ? quantityKg * landedCost : null;
+  const risk =
+    autonomyDays === null
+      ? "À qualifier"
+      : autonomyDays < 14
+        ? "Rupture"
+        : autonomyDays < 30
+          ? "Surveiller"
+          : "OK";
+
+  return {
+    stock,
+    quantityKg,
+    incomingKg,
+    eta: stock.eta || "",
+    averageDailyKg,
+    autonomyDays,
+    stockValue,
+    risk
+  };
+}
+
+function getBlendCoverage(blend) {
+  const roastedCapacities = blend.components
+    .map((component) => {
+      const stock = getStock(component.beanId);
+      const pct = Number(component.percentage || 0) / 100;
+      if (pct <= 0) return Infinity;
+      return Number(stock.quantityKg || 0) * (1 - Number(blend.roastLossPct || 0) / 100) / pct;
+    })
+    .filter((value) => Number.isFinite(value));
+
+  if (roastedCapacities.length === 0) return null;
+  return Math.min(...roastedCapacities);
+}
+
+function averageSupplierScaScore(supplierId) {
+  const scores = state.beans
+    .map((bean) => (bean.defaultSupplierId === supplierId ? toFiniteNumber(bean.scaScore) : NaN))
+    .filter((score) => Number.isFinite(score));
+
+  if (scores.length === 0) return null;
+  return scores.reduce((sum, score) => sum + score, 0) / scores.length;
 }
 
 function dateInRange(date, from, to) {
@@ -433,6 +617,25 @@ function findPrice(beanId, supplierId, date) {
   });
 
   if (matches.length === 0) {
+    const bean = getById("beans", beanId);
+    const landedCost = toFiniteNumber(bean?.landedCostPerKg);
+    if (Number.isFinite(landedCost) && landedCost > 0) {
+      return {
+        status: "ok",
+        price: {
+          id: `landed-${beanId}`,
+          beanId,
+          supplierId,
+          pricePerKg: landedCost,
+          currency: "EUR",
+          validFrom: "",
+          validTo: "",
+          notes: "Coût réel rendu entrepôt"
+        },
+        matches: []
+      };
+    }
+
     return { status: "missing", price: null, matches };
   }
 
@@ -621,15 +824,18 @@ function calculateForecast(settings = state.forecastSettings) {
   }
 
   const beanNeeds = [...beanTotals.values()].map((need) => {
-    const stock = (state.greenStocks || []).find((item) => item.beanId === need.bean?.id);
-    const stockKg = Number(stock?.quantityKg || 0);
+    const stock = getStock(need.bean?.id);
+    const stockKg = Number(stock.quantityKg || 0);
+    const incomingKg = Number(stock.incomingKg || 0);
     const requiredWithSafetyKg = need.requiredKg * (1 + Number(safeSettings.safetyStockPct || 0) / 100);
     return {
       ...need,
       stockKg,
+      incomingKg,
+      eta: stock.eta || "",
       safetyStockPct: Number(safeSettings.safetyStockPct || 0),
       requiredWithSafetyKg,
-      orderKg: Math.max(0, requiredWithSafetyKg - stockKg)
+      orderKg: Math.max(0, requiredWithSafetyKg - stockKg - incomingKg)
     };
   });
 
@@ -692,6 +898,53 @@ function calculateAlerts(date = today) {
     }
   });
 
+  state.beans.forEach((bean) => {
+    const stockInfo = getStockInfo(bean);
+    if (stockInfo.risk === "Rupture") {
+      alerts.push({
+        severity: "danger",
+        title: bean.commercialName,
+        message: `Risque de rupture dans ${formatDays(stockInfo.autonomyDays)}`
+      });
+    } else if (stockInfo.risk === "Surveiller") {
+      alerts.push({
+        severity: "warning",
+        title: bean.commercialName,
+        message: `Autonomie courte : ${formatDays(stockInfo.autonomyDays)}`
+      });
+    }
+
+    const moisturePct = toFiniteNumber(bean.moisturePct);
+    const scaScore = toFiniteNumber(bean.scaScore);
+
+    if (moisturePct > 12) {
+      alerts.push({
+        severity: "warning",
+        title: bean.commercialName,
+        message: `Humidité élevée : ${formatPct(moisturePct)}`
+      });
+    }
+
+    if (Number.isFinite(scaScore) && scaScore < 82) {
+      alerts.push({
+        severity: "warning",
+        title: bean.commercialName,
+        message: `Score SCA à surveiller : ${scaScore.toFixed(1).replace(".", ",")}`
+      });
+    }
+  });
+
+  state.suppliers.forEach((supplier) => {
+    const reliabilityPct = toFiniteNumber(supplier.reliabilityPct);
+    if (Number.isFinite(reliabilityPct) && reliabilityPct < 80) {
+      alerts.push({
+        severity: "warning",
+        title: supplier.name,
+        message: `Fiabilité fournisseur basse : ${formatPct(reliabilityPct)}`
+      });
+    }
+  });
+
   return alerts;
 }
 
@@ -731,11 +984,14 @@ function renderMetrics() {
   const alerts = calculateAlerts();
   const validPrices = state.prices.filter((price) => dateInRange(today, price.validFrom, price.validTo));
   const forecast = calculateForecast();
+  const stockInfos = state.beans.map((bean) => getStockInfo(bean));
+  const stockValue = stockInfos.reduce((sum, info) => sum + Number(info.stockValue || 0), 0);
+  const riskCount = stockInfos.filter((info) => ["Rupture", "Surveiller"].includes(info.risk)).length;
 
   els.metrics.innerHTML = [
-    ["Grains suivis", state.beans.length, "Références café vert"],
+    ["Grains suivis", state.beans.length, `${riskCount} à surveiller`],
     ["Tarifs saisis", state.prices.length, `${validPrices.length} actifs aujourd'hui`],
-    ["Assemblages", state.blends.length, "Recettes surveillées"],
+    ["Stock valorisé", formatMoney(stockValue), "Café vert disponible"],
     ["Prévision 14 j", formatKg(forecast.totalForecastRoastedKg), `${formatKg(forecast.totalOrderKg)} à commander`]
   ]
     .map(
@@ -782,6 +1038,7 @@ function renderBlendCards() {
     .map((blend) => {
       const result = calculateBlend(blend.id, today);
       const cost = result.status === "ok" ? formatMoney(result.totalCostPerKg) : "Prix manquant";
+      const coverageKg = getBlendCoverage(blend);
       const composition = blend.components
         .map((component) => {
           const bean = getById("beans", component.beanId);
@@ -793,6 +1050,7 @@ function renderBlendCards() {
         <article class="card-row">
           <strong>${escapeHtml(blend.name)} - ${escapeHtml(cost)}</strong>
           <span>${escapeHtml(composition)}</span>
+          <span>Production possible avec stock actuel : ${escapeHtml(formatKg(coverageKg))}</span>
         </article>
       `;
     })
@@ -909,6 +1167,7 @@ function renderBeanNeedsTable(rows) {
           <th class="numeric">Besoin brut</th>
           <th class="numeric">Avec sécurité</th>
           <th class="numeric">Stock</th>
+          <th class="numeric">En cours</th>
           <th class="numeric">À commander</th>
         </tr>
       </thead>
@@ -921,6 +1180,7 @@ function renderBeanNeedsTable(rows) {
                 <td class="numeric">${escapeHtml(formatKg(row.requiredKg))}</td>
                 <td class="numeric">${escapeHtml(formatKg(row.requiredWithSafetyKg))}</td>
                 <td class="numeric">${escapeHtml(formatKg(row.stockKg))}</td>
+                <td class="numeric">${escapeHtml(formatKg(row.incomingKg))}</td>
                 <td class="numeric"><strong>${escapeHtml(formatKg(row.orderKg))}</strong></td>
               </tr>
             `
@@ -1034,9 +1294,7 @@ function renderLinesTable(lines) {
 function renderBatches() {
   if (state.batches.length === 0) {
     els.batchRows.innerHTML = `
-      <tr>
-        <td colspan="5">Aucun batch figé pour le moment.</td>
-      </tr>
+      ${emptyTableRow(8, "Aucun batch figé pour le moment.")}
     `;
     return;
   }
@@ -1048,7 +1306,10 @@ function renderBatches() {
         <tr>
           <td>${escapeHtml(batch.productionDate)}</td>
           <td>${escapeHtml(blend?.name || "-")}</td>
+          <td>${escapeHtml(batch.machine || "-")}</td>
+          <td>${escapeHtml(batch.operator || "-")}</td>
           <td class="numeric">${escapeHtml(batch.roastedQuantityKg.toFixed(1))}</td>
+          <td class="numeric">${escapeHtml(formatPct(Number(batch.actualRoastLossPct)))}</td>
           <td class="numeric">${escapeHtml(formatMoney(batch.frozenTotalCostPerKg))}</td>
           <td class="numeric">${escapeHtml(formatMoney(batch.frozenBatchCost))}</td>
         </tr>
@@ -1073,16 +1334,22 @@ function renderDataTables() {
 
   els.supplierRows.innerHTML = state.suppliers.length
     ? state.suppliers
-        .map(
-          (supplier) => `
+        .map((supplier) => {
+          const averageScore = averageSupplierScaScore(supplier.id);
+          return `
             <tr>
-              <td>${escapeHtml(supplier.name)}</td>
-              <td>${escapeHtml(supplier.defaultCurrency || "EUR")}</td>
+                <td>${escapeHtml(supplier.name)}</td>
+                <td>${escapeHtml(supplier.defaultCurrency || "EUR")}</td>
+                <td class="numeric">${escapeHtml(formatDays(toFiniteNumber(supplier.averageLeadTimeDays)))}</td>
+                <td class="numeric">${escapeHtml(formatPct(toFiniteNumber(supplier.reliabilityPct)))}</td>
+              <td>${escapeHtml(supplier.incoterms || "-")}</td>
+              <td>${escapeHtml(supplier.paymentTerms || "-")}</td>
+              <td class="numeric">${escapeHtml(Number.isFinite(averageScore) ? averageScore.toFixed(1).replace(".", ",") : "-")}</td>
             </tr>
-          `
-        )
+          `;
+        })
         .join("")
-    : emptyTableRow(2);
+    : emptyTableRow(7);
 
   els.beanRows.innerHTML = `
     <table>
@@ -1091,8 +1358,15 @@ function renderDataTables() {
           <th>Grain</th>
           <th>Pays</th>
           <th>Fournisseur</th>
-          <th>Type</th>
-          <th>Process</th>
+          <th>Origine</th>
+          <th>Récolte</th>
+          <th>Container</th>
+          <th class="numeric">SCA</th>
+          <th class="numeric">Humidité</th>
+          <th class="numeric">Densité</th>
+          <th>Calibre</th>
+          <th>Emplacement</th>
+          <th class="numeric">Coût rendu</th>
         </tr>
       </thead>
       <tbody>
@@ -1107,13 +1381,20 @@ function renderDataTables() {
                       <td>${escapeHtml(bean.commercialName)}</td>
                       <td>${escapeHtml(country?.name || "-")}</td>
                       <td>${escapeHtml(supplier?.name || "-")}</td>
-                      <td>${escapeHtml(bean.species || "-")}</td>
-                      <td>${escapeHtml(bean.process || "-")}</td>
+                      <td>${escapeHtml([bean.region, bean.variety, bean.process].filter(Boolean).join(" / ") || "-")}</td>
+                      <td>${escapeHtml(bean.harvestYear || "-")}</td>
+                      <td>${escapeHtml(bean.container || "-")}</td>
+                      <td class="numeric">${escapeHtml(Number.isFinite(toFiniteNumber(bean.scaScore)) ? toFiniteNumber(bean.scaScore).toFixed(1).replace(".", ",") : "-")}</td>
+                      <td class="numeric">${escapeHtml(formatPct(toFiniteNumber(bean.moisturePct)))}</td>
+                      <td class="numeric">${escapeHtml(Number.isFinite(toFiniteNumber(bean.density)) ? toFiniteNumber(bean.density).toFixed(0) : "-")}</td>
+                      <td>${escapeHtml(bean.screenSize || "-")}</td>
+                      <td>${escapeHtml(bean.location || "-")}</td>
+                      <td class="numeric">${escapeHtml(formatMoney(toFiniteNumber(bean.landedCostPerKg)))}</td>
                     </tr>
                   `;
                 })
                 .join("")
-            : emptyTableRow(5)
+            : emptyTableRow(12)
         }
       </tbody>
     </table>
@@ -1128,6 +1409,7 @@ function renderDataTables() {
           <th class="numeric">Perte</th>
           <th class="numeric">Prix cible</th>
           <th class="numeric">Seuil</th>
+          <th class="numeric">Prod. possible</th>
         </tr>
       </thead>
       <tbody>
@@ -1141,6 +1423,7 @@ function renderDataTables() {
                       return `${component.percentage}% ${bean?.commercialName || "Grain"}`;
                     })
                     .join(" / ");
+                  const coverageKg = getBlendCoverage(blend);
 
                   return `
                     <tr>
@@ -1149,11 +1432,12 @@ function renderDataTables() {
                       <td class="numeric">${escapeHtml(formatPct(blend.roastLossPct))}</td>
                       <td class="numeric">${escapeHtml(formatMoney(blend.targetSalePricePerKg))}</td>
                       <td class="numeric">${escapeHtml(formatMoney(blend.maxCostPerKg))}</td>
+                      <td class="numeric">${escapeHtml(formatKg(coverageKg))}</td>
                     </tr>
                   `;
                 })
                 .join("")
-            : emptyTableRow(5)
+            : emptyTableRow(6)
         }
       </tbody>
     </table>
@@ -1162,16 +1446,26 @@ function renderDataTables() {
   els.stockRows.innerHTML = state.beans.length
     ? state.beans
         .map((bean) => {
-          const stock = state.greenStocks.find((item) => item.beanId === bean.id);
+          const stockInfo = getStockInfo(bean);
+          const statusClass = stockInfo.risk
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, "-");
           return `
             <tr>
               <td>${escapeHtml(bean.commercialName)}</td>
-              <td class="numeric">${escapeHtml(formatKg(Number(stock?.quantityKg || 0)))}</td>
+              <td class="numeric">${escapeHtml(formatKg(stockInfo.quantityKg))}</td>
+              <td class="numeric">${escapeHtml(formatKg(stockInfo.averageDailyKg))}</td>
+              <td class="numeric">${escapeHtml(formatDays(stockInfo.autonomyDays))}</td>
+              <td class="numeric">${escapeHtml(formatKg(stockInfo.incomingKg))}</td>
+              <td>${escapeHtml(stockInfo.eta || "-")}</td>
+              <td><span class="status-pill ${escapeHtml(statusClass)}">${escapeHtml(stockInfo.risk)}</span></td>
             </tr>
           `;
         })
         .join("")
-    : emptyTableRow(2);
+    : emptyTableRow(7);
 
   const historicalRows = [...(state.historicalOrders || [])]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -1266,7 +1560,12 @@ async function addSupplier(event) {
   state.suppliers.push({
     id: createId("supplier", name),
     name,
-    defaultCurrency: els.supplierCurrency.value
+    defaultCurrency: els.supplierCurrency.value,
+    averageLeadTimeDays: optionalNumberValue(els.supplierLeadTime),
+    reliabilityPct: optionalNumberValue(els.supplierReliability),
+    incoterms: els.supplierIncoterms.value.trim(),
+    paymentTerms: els.supplierPaymentTerms.value.trim(),
+    certifications: els.supplierCertifications.value.trim()
   });
 
   await saveState();
@@ -1297,11 +1596,24 @@ async function addBean(event) {
     countryId: els.beanCountry.value,
     defaultSupplierId: els.beanSupplier.value,
     species: els.beanSpecies.value.trim() || "arabica",
-    process: els.beanProcess.value.trim()
+    process: els.beanProcess.value.trim(),
+    region: els.beanRegion.value.trim(),
+    variety: els.beanVariety.value.trim(),
+    harvestYear: optionalNumberValue(els.beanHarvestYear),
+    container: els.beanContainer.value.trim(),
+    arrivalDate: els.beanArrivalDate.value,
+    altitudeM: optionalNumberValue(els.beanAltitude),
+    scaScore: optionalNumberValue(els.beanScaScore),
+    moisturePct: optionalNumberValue(els.beanMoisture),
+    density: optionalNumberValue(els.beanDensity),
+    screenSize: els.beanScreenSize.value.trim(),
+    landedCostPerKg: optionalNumberValue(els.beanLandedCost),
+    location: els.beanLocation.value.trim(),
+    qualityNotes: els.beanQualityNotes.value.trim()
   };
 
   state.beans.push(bean);
-  state.greenStocks.push({ beanId: bean.id, quantityKg: 0 });
+  state.greenStocks.push({ beanId: bean.id, quantityKg: 0, incomingKg: 0, eta: "" });
 
   await saveState();
   els.beanForm.reset();
@@ -1387,6 +1699,8 @@ async function updateStock(event) {
   event.preventDefault();
   const beanId = els.stockBean.value;
   const quantityKg = numberValue(els.stockQuantity, NaN);
+  const incomingKg = els.stockIncoming.value ? numberValue(els.stockIncoming, 0) : 0;
+  const eta = els.stockEta.value;
 
   if (!beanId) {
     window.alert("Ajoute un grain avant de saisir un stock.");
@@ -1401,8 +1715,10 @@ async function updateStock(event) {
   const existing = state.greenStocks.find((stock) => stock.beanId === beanId);
   if (existing) {
     existing.quantityKg = quantityKg;
+    existing.incomingKg = incomingKg;
+    existing.eta = eta;
   } else {
-    state.greenStocks.push({ beanId, quantityKg });
+    state.greenStocks.push({ beanId, quantityKg, incomingKg, eta });
   }
 
   await saveState();
@@ -1520,6 +1836,9 @@ async function addBatch(event) {
     id: `batch-${crypto.randomUUID()}`,
     productionDate: els.batchDate.value,
     blendId: els.batchBlend.value,
+    machine: els.batchMachine.value.trim(),
+    operator: els.batchOperator.value.trim(),
+    curveNotes: els.batchCurve.value.trim(),
     roastedQuantityKg: quantity,
     greenQuantityKg: quantity / (1 - result.lossPct / 100),
     actualRoastLossPct: result.lossPct,

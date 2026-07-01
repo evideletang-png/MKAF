@@ -230,7 +230,7 @@
             <div class="panel-heading">
               <h2>Nouveau batch</h2>
             </div>
-            <form class="form-grid compact" id="batchForm">
+            <form class="form-grid" id="batchForm">
               <label>
                 Assemblage
                 <select id="batchBlend"></select>
@@ -247,6 +247,18 @@
                 Perte réelle %
                 <input id="batchLoss" inputmode="decimal" min="0" max="50" step="0.1" type="number" />
               </label>
+              <label>
+                Machine
+                <input id="batchMachine" type="text" placeholder="Torréfacteur 15 kg" />
+              </label>
+              <label>
+                Opérateur
+                <input id="batchOperator" type="text" placeholder="Nom" />
+              </label>
+              <label class="wide">
+                Courbe / commentaire
+                <input id="batchCurve" type="text" placeholder="Profil, courbe, incident qualité..." />
+              </label>
               <button class="primary align-end" type="submit">Figer le coût</button>
             </form>
           </section>
@@ -261,7 +273,10 @@
                   <tr>
                     <th>Date</th>
                     <th>Assemblage</th>
+                    <th>Machine</th>
+                    <th>Opérateur</th>
                     <th>Kg torréfiés</th>
+                    <th>Perte</th>
                     <th>Coût figé / kg</th>
                     <th>Coût batch</th>
                   </tr>
@@ -306,7 +321,7 @@
               <div class="panel-heading">
                 <h2>Fournisseurs</h2>
               </div>
-              <form class="form-grid compact" id="supplierForm">
+              <form class="form-grid" id="supplierForm">
                 <label>
                   Nom
                   <input id="supplierName" type="text" placeholder="Importateur, coopérative..." required />
@@ -318,6 +333,26 @@
                     <option>USD</option>
                   </select>
                 </label>
+                <label>
+                  Délai moyen jours
+                  <input id="supplierLeadTime" inputmode="numeric" min="0" step="1" type="number" />
+                </label>
+                <label>
+                  Fiabilité %
+                  <input id="supplierReliability" inputmode="decimal" min="0" max="100" step="1" type="number" />
+                </label>
+                <label>
+                  Incoterms
+                  <input id="supplierIncoterms" type="text" placeholder="EXW, FOB, CIF..." />
+                </label>
+                <label>
+                  Paiement
+                  <input id="supplierPaymentTerms" type="text" placeholder="30 jours, acompte..." />
+                </label>
+                <label class="wide">
+                  Certifications / notes
+                  <input id="supplierCertifications" type="text" placeholder="Bio, Fairtrade, Rainforest, remarques..." />
+                </label>
                 <button class="primary align-end" type="submit">Ajouter</button>
               </form>
               <div class="table-wrap spaced">
@@ -326,6 +361,11 @@
                     <tr>
                       <th>Fournisseur</th>
                       <th>Devise</th>
+                      <th class="numeric">Délai</th>
+                      <th class="numeric">Fiabilité</th>
+                      <th>Incoterms</th>
+                      <th>Paiement</th>
+                      <th class="numeric">SCA moyen</th>
                     </tr>
                   </thead>
                   <tbody id="supplierRows"></tbody>
@@ -357,6 +397,58 @@
                 <label>
                   Process
                   <input id="beanProcess" type="text" placeholder="lavé, naturel, honey..." />
+                </label>
+                <label>
+                  Région
+                  <input id="beanRegion" type="text" placeholder="Cerrado, Sidamo..." />
+                </label>
+                <label>
+                  Variété
+                  <input id="beanVariety" type="text" placeholder="Bourbon, Caturra..." />
+                </label>
+                <label>
+                  Récolte
+                  <input id="beanHarvestYear" inputmode="numeric" min="2000" max="2100" step="1" type="number" />
+                </label>
+                <label>
+                  Container
+                  <input id="beanContainer" type="text" placeholder="ABC123" />
+                </label>
+                <label>
+                  Date arrivée
+                  <input id="beanArrivalDate" type="date" />
+                </label>
+                <label>
+                  Altitude m
+                  <input id="beanAltitude" inputmode="numeric" min="0" step="1" type="number" />
+                </label>
+                <label>
+                  Score SCA
+                  <input id="beanScaScore" inputmode="decimal" min="0" max="100" step="0.1" type="number" />
+                </label>
+                <label>
+                  Humidité %
+                  <input id="beanMoisture" inputmode="decimal" min="0" max="100" step="0.1" type="number" />
+                </label>
+                <label>
+                  Densité
+                  <input id="beanDensity" inputmode="decimal" min="0" step="0.1" type="number" />
+                </label>
+                <label>
+                  Calibre
+                  <input id="beanScreenSize" type="text" placeholder="17/18" />
+                </label>
+                <label>
+                  Coût rendu / kg
+                  <input id="beanLandedCost" inputmode="decimal" min="0" step="0.01" type="number" />
+                </label>
+                <label>
+                  Emplacement
+                  <input id="beanLocation" type="text" placeholder="Dépôt A - Rack 3" />
+                </label>
+                <label class="wide">
+                  Analyses / qualité
+                  <input id="beanQualityNotes" type="text" placeholder="Défauts, photos, historique qualité..." />
                 </label>
                 <button class="primary align-end" type="submit">Ajouter le grain</button>
               </form>
@@ -439,6 +531,14 @@
                   Stock kg
                   <input id="stockQuantity" inputmode="decimal" min="0" step="0.1" type="number" required />
                 </label>
+                <label>
+                  Commande en cours kg
+                  <input id="stockIncoming" inputmode="decimal" min="0" step="0.1" type="number" />
+                </label>
+                <label>
+                  ETA
+                  <input id="stockEta" type="date" />
+                </label>
                 <button class="primary align-end" type="submit">Mettre à jour</button>
               </form>
               <div class="table-wrap spaced">
@@ -447,6 +547,11 @@
                     <tr>
                       <th>Grain</th>
                       <th class="numeric">Stock</th>
+                      <th class="numeric">Conso/j</th>
+                      <th class="numeric">Autonomie</th>
+                      <th class="numeric">Commande</th>
+                      <th>ETA</th>
+                      <th>Risque</th>
                     </tr>
                   </thead>
                   <tbody id="stockRows"></tbody>
