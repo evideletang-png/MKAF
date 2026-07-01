@@ -459,6 +459,43 @@ select:focus {
   font-weight: 800;
 }
 
+.region-accordion {
+  display: grid;
+  gap: 10px;
+}
+
+.region-group {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.region-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 11px 12px;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.region-count {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.country-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0 12px 12px 30px;
+  color: var(--ink);
+}
+
 .nested-grid {
   margin-top: 14px;
 }

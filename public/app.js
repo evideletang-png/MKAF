@@ -1598,18 +1598,42 @@ function renderBatches() {
 }
 
 function renderDataTables() {
-  els.countryRows.innerHTML = state.countries.length
-    ? state.countries
-        .map(
-          (country) => `
-            <tr>
-              <td>${escapeHtml(country.name)}</td>
-              <td>${escapeHtml(country.region || "-")}</td>
-            </tr>
-          `
-        )
-        .join("")
-    : emptyTableRow(2);
+  if (state.countries.length === 0) {
+    els.countryRows.innerHTML = `
+      <div class="empty-state">
+        <strong>Aucune donnée</strong>
+        <span>Ajoute un pays producteur pour l'afficher ici.</span>
+      </div>
+    `;
+  } else {
+    const countriesByRegion = state.countries.reduce((groups, country) => {
+      const region = country.region?.trim() || "Sans région";
+      const countries = groups.get(region) || [];
+      countries.push(country);
+      groups.set(region, countries);
+      return groups;
+    }, new Map());
+
+    els.countryRows.innerHTML = [...countriesByRegion.entries()]
+      .sort(([regionA], [regionB]) => regionA.localeCompare(regionB, "fr"))
+      .map(([region, countries], index) => {
+        const sortedCountries = [...countries].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+        return `
+          <details class="region-group" ${index === 0 ? "open" : ""}>
+            <summary>
+              <span class="region-name">${escapeHtml(region)}</span>
+              <span class="region-count">${escapeHtml(String(sortedCountries.length))} pays</span>
+            </summary>
+            <ul class="country-list">
+              ${sortedCountries
+                .map((country) => `<li>${escapeHtml(country.name)}</li>`)
+                .join("")}
+            </ul>
+          </details>
+        `;
+      })
+      .join("");
+  }
 
   els.supplierRows.innerHTML = state.suppliers.length
     ? state.suppliers
