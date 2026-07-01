@@ -490,7 +490,8 @@
                     Certifications / notes
                     <input id="supplierCertifications" type="text" placeholder="Bio, Fairtrade, Rainforest, remarques..." />
                   </label>
-                  <button class="primary align-end" type="submit">Ajouter</button>
+                  <button class="primary align-end" id="supplierSubmit" type="submit">Ajouter</button>
+                  <button class="secondary align-end" id="cancelSupplierEdit" type="button" hidden>Annuler</button>
                 </form>
                 <div class="table-wrap spaced">
                   <table>
@@ -503,6 +504,7 @@
                         <th>Incoterms</th>
                         <th>Paiement</th>
                         <th class="numeric">SCA moyen</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody id="supplierRows"></tbody>
@@ -596,7 +598,8 @@
                     </label>
                   </div>
                 </details>
-                <button class="primary align-end" type="submit">Ajouter le grain</button>
+                <button class="primary align-end" id="beanSubmit" type="submit">Ajouter le grain</button>
+                <button class="secondary align-end" id="cancelBeanEdit" type="button" hidden>Annuler</button>
               </form>
               <div id="beanRows" class="table-wrap spaced"></div>
             </section>
@@ -647,7 +650,8 @@
                   </div>
                   <button class="secondary add-component" id="addBlendComponent" type="button">Ajouter une ligne</button>
                 </div>
-                <button class="primary align-end" type="submit">Créer l'assemblage</button>
+                <button class="primary align-end" id="blendSubmit" type="submit">Créer l'assemblage</button>
+                <button class="secondary align-end" id="cancelBlendEdit" type="button" hidden>Annuler</button>
               </form>
               <div id="blendRows" class="table-wrap spaced"></div>
             </section>
@@ -746,7 +750,8 @@
                     <option value="web">Web</option>
                   </select>
                 </label>
-                <button class="primary align-end" type="submit">Ajouter</button>
+                <button class="primary align-end" id="historySubmit" type="submit">Ajouter</button>
+                <button class="secondary align-end" id="cancelHistoryEdit" type="button" hidden>Annuler</button>
               </form>
               <div class="table-wrap spaced">
                 <table>
@@ -756,6 +761,7 @@
                       <th>Assemblage</th>
                       <th class="numeric">Kg</th>
                       <th>Canal</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody id="historyRows"></tbody>

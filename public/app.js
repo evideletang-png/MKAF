@@ -2,6 +2,10 @@ const STORAGE_KEY = "cout-cafe-prototype-v1";
 
 const today = new Date().toISOString().slice(0, 10);
 let storageMode = "browser";
+let editingSupplierId = null;
+let editingBeanId = null;
+let editingBlendId = null;
+let editingHistoricalOrderId = null;
 
 const defaultDataSection = "references";
 
@@ -438,6 +442,8 @@ const els = {
   supplierIncoterms: document.querySelector("#supplierIncoterms"),
   supplierPaymentTerms: document.querySelector("#supplierPaymentTerms"),
   supplierCertifications: document.querySelector("#supplierCertifications"),
+  supplierSubmit: document.querySelector("#supplierSubmit"),
+  cancelSupplierEdit: document.querySelector("#cancelSupplierEdit"),
   supplierRows: document.querySelector("#supplierRows"),
   beanForm: document.querySelector("#beanForm"),
   beanName: document.querySelector("#beanName"),
@@ -458,6 +464,8 @@ const els = {
   beanLandedCost: document.querySelector("#beanLandedCost"),
   beanLocation: document.querySelector("#beanLocation"),
   beanQualityNotes: document.querySelector("#beanQualityNotes"),
+  beanSubmit: document.querySelector("#beanSubmit"),
+  cancelBeanEdit: document.querySelector("#cancelBeanEdit"),
   beanRows: document.querySelector("#beanRows"),
   blendForm: document.querySelector("#blendForm"),
   blendName: document.querySelector("#blendName"),
@@ -469,6 +477,8 @@ const els = {
   blendLogistics: document.querySelector("#blendLogistics"),
   blendComponents: document.querySelector("#blendComponents"),
   addBlendComponent: document.querySelector("#addBlendComponent"),
+  blendSubmit: document.querySelector("#blendSubmit"),
+  cancelBlendEdit: document.querySelector("#cancelBlendEdit"),
   blendRows: document.querySelector("#blendRows"),
   stockForm: document.querySelector("#stockForm"),
   stockBean: document.querySelector("#stockBean"),
@@ -483,6 +493,8 @@ const els = {
   historyBlend: document.querySelector("#historyBlend"),
   historyKg: document.querySelector("#historyKg"),
   historyChannel: document.querySelector("#historyChannel"),
+  historySubmit: document.querySelector("#historySubmit"),
+  cancelHistoryEdit: document.querySelector("#cancelHistoryEdit"),
   historyRows: document.querySelector("#historyRows"),
   historyRowsCount: document.querySelector("#historyRowsCount"),
   exportData: document.querySelector("#exportData"),
@@ -1830,6 +1842,38 @@ function renderBatches() {
     .join("");
 }
 
+function rowActions(type, id) {
+  return `
+    <div class="row-actions">
+      <button class="secondary table-action" data-edit-${type}="${escapeHtml(id)}" type="button">Modifier</button>
+      <button class="secondary table-action" data-delete-${type}="${escapeHtml(id)}" type="button">Supprimer</button>
+    </div>
+  `;
+}
+
+function supplierUsage(supplierId) {
+  return {
+    beans: state.beans.filter((bean) => bean.defaultSupplierId === supplierId).length,
+    prices: state.prices.filter((price) => price.supplierId === supplierId).length,
+    batches: state.batches.filter((batch) => batch.lines?.some((line) => line.supplierId === supplierId)).length
+  };
+}
+
+function beanUsage(beanId) {
+  return {
+    blends: state.blends.filter((blend) => blend.components.some((component) => component.beanId === beanId)).length,
+    prices: state.prices.filter((price) => price.beanId === beanId).length,
+    batches: state.batches.filter((batch) => batch.lines?.some((line) => line.beanId === beanId)).length
+  };
+}
+
+function blendUsage(blendId) {
+  return {
+    orders: state.historicalOrders.filter((order) => order.blendId === blendId).length,
+    batches: state.batches.filter((batch) => batch.blendId === blendId).length
+  };
+}
+
 function renderDataTables() {
   if (state.countries.length === 0) {
     els.countryRows.innerHTML = `
@@ -1859,7 +1903,15 @@ function renderDataTables() {
             </summary>
             <ul class="country-list">
               ${sortedCountries
-                .map((country) => `<li>${escapeHtml(country.name)}</li>`)
+                .map((country) => {
+                  const isUsed = state.beans.some((bean) => bean.countryId === country.id);
+                  return `
+                    <li class="country-item">
+                      <span>${escapeHtml(country.name)}</span>
+                      <button class="secondary table-action" data-delete-country="${escapeHtml(country.id)}" type="button" ${isUsed ? "disabled" : ""}>Retirer</button>
+                    </li>
+                  `;
+                })
                 .join("")}
             </ul>
           </details>
@@ -1881,11 +1933,12 @@ function renderDataTables() {
               <td>${escapeHtml(supplier.incoterms || "-")}</td>
               <td>${escapeHtml(supplier.paymentTerms || "-")}</td>
               <td class="numeric">${escapeHtml(Number.isFinite(averageScore) ? averageScore.toFixed(1).replace(".", ",") : "-")}</td>
+              <td>${rowActions("supplier", supplier.id)}</td>
             </tr>
           `;
         })
         .join("")
-    : emptyTableRow(7);
+    : emptyTableRow(8);
 
   els.beanRows.innerHTML = `
     <table>
@@ -1903,6 +1956,7 @@ function renderDataTables() {
           <th>Calibre</th>
           <th>Emplacement</th>
           <th class="numeric">Coût rendu</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -1926,11 +1980,12 @@ function renderDataTables() {
                       <td>${escapeHtml(bean.screenSize || "-")}</td>
                       <td>${escapeHtml(bean.location || "-")}</td>
                       <td class="numeric">${escapeHtml(formatMoney(toFiniteNumber(bean.landedCostPerKg)))}</td>
+                      <td>${rowActions("bean", bean.id)}</td>
                     </tr>
                   `;
                 })
                 .join("")
-            : emptyTableRow(12)
+            : emptyTableRow(13)
         }
       </tbody>
     </table>
@@ -1946,6 +2001,7 @@ function renderDataTables() {
           <th class="numeric">Prix cible</th>
           <th class="numeric">Seuil</th>
           <th class="numeric">Prod. possible</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -1969,11 +2025,12 @@ function renderDataTables() {
                       <td class="numeric">${escapeHtml(formatMoney(blend.targetSalePricePerKg))}</td>
                       <td class="numeric">${escapeHtml(formatMoney(blend.maxCostPerKg))}</td>
                       <td class="numeric">${escapeHtml(formatKg(coverageKg))}</td>
+                      <td>${rowActions("blend", blend.id)}</td>
                     </tr>
                   `;
                 })
                 .join("")
-            : emptyTableRow(6)
+            : emptyTableRow(7)
         }
       </tbody>
     </table>
@@ -2041,11 +2098,12 @@ function renderDataTables() {
               <td>${escapeHtml(blend?.name || "-")}</td>
               <td class="numeric">${escapeHtml(formatKg(Number(order.roastedKg || 0)))}</td>
               <td>${escapeHtml(order.channel || "-")}</td>
+              <td>${rowActions("history", order.id)}</td>
             </tr>
           `;
         })
         .join("")
-    : emptyTableRow(4);
+    : emptyTableRow(5);
 }
 
 function renderAll() {
@@ -2118,20 +2176,95 @@ async function addCountry(event) {
   renderAll();
 }
 
+async function deleteCountry(event) {
+  const button = event.target.closest("[data-delete-country]");
+  if (!button) return;
+
+  const country = getById("countries", button.dataset.deleteCountry);
+  if (!country) return;
+
+  if (state.beans.some((bean) => bean.countryId === country.id)) {
+    window.alert("Ce pays est utilisé par au moins un grain.");
+    return;
+  }
+
+  if (!window.confirm(`Retirer ${country.name} ?`)) return;
+
+  state.countries = state.countries.filter((item) => item.id !== country.id);
+  await saveState();
+  renderAll();
+}
+
+function resetSupplierForm() {
+  editingSupplierId = null;
+  els.supplierForm.reset();
+  els.supplierSubmit.textContent = "Ajouter";
+  els.cancelSupplierEdit.hidden = true;
+}
+
+function editSupplier(supplierId) {
+  const supplier = getById("suppliers", supplierId);
+  if (!supplier) return;
+
+  editingSupplierId = supplier.id;
+  els.supplierName.value = supplier.name || "";
+  els.supplierCurrency.value = supplier.defaultCurrency || "EUR";
+  els.supplierLeadTime.value = supplier.averageLeadTimeDays ?? "";
+  els.supplierReliability.value = supplier.reliabilityPct ?? "";
+  els.supplierIncoterms.value = supplier.incoterms || "";
+  els.supplierPaymentTerms.value = supplier.paymentTerms || "";
+  els.supplierCertifications.value = supplier.certifications || "";
+  els.supplierSubmit.textContent = "Enregistrer";
+  els.cancelSupplierEdit.hidden = false;
+  els.supplierForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function deleteSupplier(supplierId) {
+  const supplier = getById("suppliers", supplierId);
+  if (!supplier) return;
+
+  const usage = supplierUsage(supplierId);
+  if (usage.beans || usage.prices || usage.batches) {
+    window.alert("Ce fournisseur est encore utilisé par des grains, tarifs ou batchs.");
+    return;
+  }
+
+  if (!window.confirm(`Supprimer ${supplier.name} ?`)) return;
+
+  state.suppliers = state.suppliers.filter((item) => item.id !== supplierId);
+  state.stockMovements = (state.stockMovements || []).filter((movement) => movement.supplierId !== supplierId);
+  await saveState();
+  resetSupplierForm();
+  renderAll();
+}
+
+async function handleSupplierRowsClick(event) {
+  const editButton = event.target.closest("[data-edit-supplier]");
+  if (editButton) {
+    editSupplier(editButton.dataset.editSupplier);
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-delete-supplier]");
+  if (deleteButton) {
+    await deleteSupplier(deleteButton.dataset.deleteSupplier);
+  }
+}
+
 async function addSupplier(event) {
   event.preventDefault();
   const name = els.supplierName.value.trim();
 
   if (!name) return;
 
-  const exists = state.suppliers.some((supplier) => supplier.name.toLowerCase() === name.toLowerCase());
+  const exists = state.suppliers.some((supplier) => supplier.id !== editingSupplierId && normalizeKey(supplier.name) === normalizeKey(name));
   if (exists) {
     window.alert("Ce fournisseur existe déjà.");
     return;
   }
 
-  state.suppliers.push({
-    id: createId("supplier", name),
+  const supplier = editingSupplierId ? getById("suppliers", editingSupplierId) : null;
+  const payload = {
     name,
     defaultCurrency: els.supplierCurrency.value,
     averageLeadTimeDays: optionalNumberValue(els.supplierLeadTime),
@@ -2139,11 +2272,96 @@ async function addSupplier(event) {
     incoterms: els.supplierIncoterms.value.trim(),
     paymentTerms: els.supplierPaymentTerms.value.trim(),
     certifications: els.supplierCertifications.value.trim()
-  });
+  };
+
+  if (supplier) {
+    Object.assign(supplier, payload);
+  } else {
+    state.suppliers.push({
+      id: createId("supplier", name),
+      ...payload
+    });
+  }
+
+  state.suppliers.sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   await saveState();
-  els.supplierForm.reset();
+  resetSupplierForm();
   renderAll();
+}
+
+function resetBeanForm() {
+  editingBeanId = null;
+  els.beanForm.reset();
+  els.beanSubmit.textContent = "Ajouter le grain";
+  els.cancelBeanEdit.hidden = true;
+}
+
+function editBean(beanId) {
+  const bean = getById("beans", beanId);
+  if (!bean) return;
+
+  editingBeanId = bean.id;
+  els.beanName.value = bean.commercialName || "";
+  els.beanCountry.value = bean.countryId || "";
+  els.beanSupplier.value = bean.defaultSupplierId || "";
+  els.beanSpecies.value = bean.species || "";
+  els.beanProcess.value = bean.process || "";
+  els.beanRegion.value = bean.region || "";
+  els.beanVariety.value = bean.variety || "";
+  els.beanHarvestYear.value = bean.harvestYear ?? "";
+  els.beanContainer.value = bean.container || "";
+  els.beanArrivalDate.value = bean.arrivalDate || "";
+  els.beanAltitude.value = bean.altitudeM ?? "";
+  els.beanScaScore.value = bean.scaScore ?? "";
+  els.beanMoisture.value = bean.moisturePct ?? "";
+  els.beanDensity.value = bean.density ?? "";
+  els.beanScreenSize.value = bean.screenSize || "";
+  els.beanLandedCost.value = bean.landedCostPerKg ?? "";
+  els.beanLocation.value = bean.location || "";
+  els.beanQualityNotes.value = bean.qualityNotes || "";
+  els.beanSubmit.textContent = "Enregistrer";
+  els.cancelBeanEdit.hidden = false;
+  els.beanForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function deleteBean(beanId) {
+  const bean = getById("beans", beanId);
+  if (!bean) return;
+
+  const usage = beanUsage(beanId);
+  if (usage.blends || usage.batches) {
+    window.alert("Ce grain est utilisé dans un assemblage ou un batch.");
+    return;
+  }
+
+  const linkedPrices = state.prices.filter((price) => price.beanId === beanId).length;
+  const confirmMessage = linkedPrices
+    ? `Supprimer ${bean.commercialName} et ${linkedPrices} tarif(s) lié(s) ?`
+    : `Supprimer ${bean.commercialName} ?`;
+  if (!window.confirm(confirmMessage)) return;
+
+  state.beans = state.beans.filter((item) => item.id !== beanId);
+  state.prices = state.prices.filter((price) => price.beanId !== beanId);
+  state.greenStocks = state.greenStocks.filter((stock) => stock.beanId !== beanId);
+  state.stockMovements = (state.stockMovements || []).filter((movement) => movement.beanId !== beanId);
+
+  await saveState();
+  resetBeanForm();
+  renderAll();
+}
+
+async function handleBeanRowsClick(event) {
+  const editButton = event.target.closest("[data-edit-bean]");
+  if (editButton) {
+    editBean(editButton.dataset.editBean);
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-delete-bean]");
+  if (deleteButton) {
+    await deleteBean(deleteButton.dataset.deleteBean);
+  }
 }
 
 async function addBean(event) {
@@ -2157,14 +2375,14 @@ async function addBean(event) {
     return;
   }
 
-  const exists = state.beans.some((bean) => bean.commercialName.toLowerCase() === commercialName.toLowerCase());
+  const exists = state.beans.some((bean) => bean.id !== editingBeanId && normalizeKey(bean.commercialName) === normalizeKey(commercialName));
   if (exists) {
     window.alert("Ce grain existe déjà.");
     return;
   }
 
-  const bean = {
-    id: createId("bean", commercialName),
+  const bean = editingBeanId ? getById("beans", editingBeanId) : null;
+  const payload = {
     commercialName,
     countryId: els.beanCountry.value,
     defaultSupplierId: els.beanSupplier.value,
@@ -2185,11 +2403,21 @@ async function addBean(event) {
     qualityNotes: els.beanQualityNotes.value.trim()
   };
 
-  state.beans.push(bean);
-  state.greenStocks.push({ beanId: bean.id, quantityKg: 0, incomingKg: 0, eta: "" });
+  if (bean) {
+    Object.assign(bean, payload);
+  } else {
+    const newBean = {
+      id: createId("bean", commercialName),
+      ...payload
+    };
+    state.beans.push(newBean);
+    state.greenStocks.push({ beanId: newBean.id, quantityKg: 0, incomingKg: 0, eta: "" });
+  }
+
+  state.beans.sort((a, b) => a.commercialName.localeCompare(b.commercialName, "fr"));
 
   await saveState();
-  els.beanForm.reset();
+  resetBeanForm();
   renderAll();
 }
 
@@ -2205,15 +2433,25 @@ function createBlendComponentRow() {
   renderSelects();
 }
 
-function resetBlendComponentRows() {
-  els.blendComponents.innerHTML = `
-    <div class="component-row">
-      <select class="blend-component-bean"></select>
-      <input class="blend-component-percentage" inputmode="decimal" min="0" max="100" step="0.1" type="number" placeholder="%" />
-      <button class="secondary component-remove" type="button" hidden>Retirer</button>
-    </div>
-  `;
+function setBlendComponentRows(components = [{ beanId: "", percentage: "" }]) {
+  const rows = components.length ? components : [{ beanId: "", percentage: "" }];
+  els.blendComponents.innerHTML = rows
+    .map((component) => `
+      <div class="component-row">
+        <select class="blend-component-bean"></select>
+        <input class="blend-component-percentage" inputmode="decimal" min="0" max="100" step="0.1" type="number" placeholder="%" value="${escapeHtml(component.percentage ?? "")}" />
+        <button class="secondary component-remove" type="button" ${rows.length <= 1 ? "hidden" : ""}>Retirer</button>
+      </div>
+    `)
+    .join("");
   renderSelects();
+  blendComponentRows().forEach((row, index) => {
+    row.querySelector(".blend-component-bean").value = rows[index]?.beanId || "";
+  });
+}
+
+function resetBlendComponentRows() {
+  setBlendComponentRows();
 }
 
 function removeBlendComponentRow(event) {
@@ -2251,6 +2489,67 @@ function collectBlendComponents() {
   return components;
 }
 
+function resetBlendForm() {
+  editingBlendId = null;
+  els.blendForm.reset();
+  els.blendLoss.value = "15";
+  els.blendPackaging.value = "0.55";
+  els.blendEnergy.value = "0.22";
+  els.blendLogistics.value = "0.18";
+  els.blendSubmit.textContent = "Créer l'assemblage";
+  els.cancelBlendEdit.hidden = true;
+  resetBlendComponentRows();
+}
+
+function editBlend(blendId) {
+  const blend = getById("blends", blendId);
+  if (!blend) return;
+
+  editingBlendId = blend.id;
+  els.blendName.value = blend.name || "";
+  els.blendLoss.value = blend.roastLossPct ?? 15;
+  els.blendTargetPrice.value = blend.targetSalePricePerKg ?? "";
+  els.blendMaxCost.value = blend.maxCostPerKg ?? "";
+  els.blendPackaging.value = blend.packagingCostPerKg ?? "";
+  els.blendEnergy.value = blend.energyCostPerKg ?? "";
+  els.blendLogistics.value = blend.logisticsCostPerKg ?? "";
+  setBlendComponentRows(blend.components);
+  els.blendSubmit.textContent = "Enregistrer";
+  els.cancelBlendEdit.hidden = false;
+  els.blendForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function deleteBlend(blendId) {
+  const blend = getById("blends", blendId);
+  if (!blend) return;
+
+  const usage = blendUsage(blendId);
+  if (usage.orders || usage.batches) {
+    window.alert("Cet assemblage est utilisé dans l'activité N-1 ou la production.");
+    return;
+  }
+
+  if (!window.confirm(`Supprimer ${blend.name} ?`)) return;
+
+  state.blends = state.blends.filter((item) => item.id !== blendId);
+  await saveState();
+  resetBlendForm();
+  renderAll();
+}
+
+async function handleBlendRowsClick(event) {
+  const editButton = event.target.closest("[data-edit-blend]");
+  if (editButton) {
+    editBlend(editButton.dataset.editBlend);
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-delete-blend]");
+  if (deleteButton) {
+    await deleteBlend(deleteButton.dataset.deleteBlend);
+  }
+}
+
 async function addBlend(event) {
   event.preventDefault();
   const name = els.blendName.value.trim();
@@ -2280,8 +2579,14 @@ async function addBlend(event) {
     return;
   }
 
-  state.blends.push({
-    id: createId("blend", name),
+  const exists = state.blends.some((blend) => blend.id !== editingBlendId && normalizeKey(blend.name) === normalizeKey(name));
+  if (exists) {
+    window.alert("Cet assemblage existe déjà.");
+    return;
+  }
+
+  const blend = editingBlendId ? getById("blends", editingBlendId) : null;
+  const payload = {
     name,
     roastLossPct: numberValue(els.blendLoss, 15),
     packagingCostPerKg: numberValue(els.blendPackaging, 0),
@@ -2290,15 +2595,21 @@ async function addBlend(event) {
     targetSalePricePerKg: els.blendTargetPrice.value ? numberValue(els.blendTargetPrice, 0) : null,
     maxCostPerKg: els.blendMaxCost.value ? numberValue(els.blendMaxCost, 0) : null,
     components
-  });
+  };
+
+  if (blend) {
+    Object.assign(blend, payload);
+  } else {
+    state.blends.push({
+      id: createId("blend", name),
+      ...payload
+    });
+  }
+
+  state.blends.sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   await saveState();
-  els.blendForm.reset();
-  els.blendLoss.value = "15";
-  els.blendPackaging.value = "0.55";
-  els.blendEnergy.value = "0.22";
-  els.blendLogistics.value = "0.18";
-  resetBlendComponentRows();
+  resetBlendForm();
   renderAll();
 }
 
@@ -2343,6 +2654,53 @@ async function updateStock(event) {
   renderAll();
 }
 
+function resetHistoryForm() {
+  editingHistoricalOrderId = null;
+  els.historyForm.reset();
+  els.historyDate.value = previousYearDate(today);
+  els.historySubmit.textContent = "Ajouter";
+  els.cancelHistoryEdit.hidden = true;
+}
+
+function editHistoricalOrder(orderId) {
+  const order = state.historicalOrders.find((item) => item.id === orderId);
+  if (!order) return;
+
+  editingHistoricalOrderId = order.id;
+  els.historyDate.value = order.date || previousYearDate(today);
+  els.historyBlend.value = order.blendId || "";
+  els.historyKg.value = order.roastedKg ?? "";
+  els.historyChannel.value = order.channel || "mixte";
+  els.historySubmit.textContent = "Enregistrer";
+  els.cancelHistoryEdit.hidden = false;
+  els.historyForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function deleteHistoricalOrder(orderId) {
+  const order = state.historicalOrders.find((item) => item.id === orderId);
+  if (!order) return;
+
+  if (!window.confirm("Supprimer cette ligne d'activité N-1 ?")) return;
+
+  state.historicalOrders = state.historicalOrders.filter((item) => item.id !== orderId);
+  await saveState();
+  resetHistoryForm();
+  renderAll();
+}
+
+async function handleHistoryRowsClick(event) {
+  const editButton = event.target.closest("[data-edit-history]");
+  if (editButton) {
+    editHistoricalOrder(editButton.dataset.editHistory);
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-delete-history]");
+  if (deleteButton) {
+    await deleteHistoricalOrder(deleteButton.dataset.deleteHistory);
+  }
+}
+
 async function addHistoricalOrder(event) {
   event.preventDefault();
   const roastedKg = numberValue(els.historyKg, NaN);
@@ -2357,17 +2715,25 @@ async function addHistoricalOrder(event) {
     return;
   }
 
-  state.historicalOrders.push({
-    id: createId("order", `${els.historyDate.value}-${els.historyBlend.value}`),
+  const existingOrder = editingHistoricalOrderId ? state.historicalOrders.find((order) => order.id === editingHistoricalOrderId) : null;
+  const payload = {
     date: els.historyDate.value,
     blendId: els.historyBlend.value,
     roastedKg,
     channel: els.historyChannel.value
-  });
+  };
+
+  if (existingOrder) {
+    Object.assign(existingOrder, payload);
+  } else {
+    state.historicalOrders.push({
+      id: createId("order", `${els.historyDate.value}-${els.historyBlend.value}`),
+      ...payload
+    });
+  }
 
   await saveState();
-  els.historyForm.reset();
-  els.historyDate.value = previousYearDate(today);
+  resetHistoryForm();
   renderAll();
 }
 
@@ -3432,13 +3798,22 @@ function setupNavigation() {
 }
 
 els.countryForm.addEventListener("submit", addCountry);
+els.countryRows.addEventListener("click", deleteCountry);
 els.supplierForm.addEventListener("submit", addSupplier);
+els.cancelSupplierEdit.addEventListener("click", resetSupplierForm);
+els.supplierRows.addEventListener("click", handleSupplierRowsClick);
 els.beanForm.addEventListener("submit", addBean);
+els.cancelBeanEdit.addEventListener("click", resetBeanForm);
+els.beanRows.addEventListener("click", handleBeanRowsClick);
 els.blendForm.addEventListener("submit", addBlend);
+els.cancelBlendEdit.addEventListener("click", resetBlendForm);
 els.addBlendComponent.addEventListener("click", createBlendComponentRow);
 els.blendComponents.addEventListener("click", removeBlendComponentRow);
+els.blendRows.addEventListener("click", handleBlendRowsClick);
 els.stockForm.addEventListener("submit", updateStock);
 els.historyForm.addEventListener("submit", addHistoricalOrder);
+els.cancelHistoryEdit.addEventListener("click", resetHistoryForm);
+els.historyRows.addEventListener("click", handleHistoryRowsClick);
 els.countryName.addEventListener("change", syncSelectedCountryRegion);
 els.quickPurchaseCategory.addEventListener("change", syncQuickPurchaseCategory);
 els.quickPurchaseForm.addEventListener("submit", addQuickPurchase);

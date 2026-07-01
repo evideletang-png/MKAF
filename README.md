@@ -6,6 +6,7 @@ Prototype interne Max Cafés pour piloter les grains, les fournisseurs, les asse
 
 - Catalogue de grains et fournisseurs de démonstration.
 - Création de pays producteurs, fournisseurs, grains, assemblages, stocks et lignes d'activité N-1 depuis l'interface.
+- Correction et suppression encadrée des fournisseurs, grains, assemblages et lignes d'activité N-1.
 - Référentiel élargi de 57 origines café, avec région automatique et ajout depuis une liste contrôlée.
 - Fiches grains enrichies : origine, région, variété, récolte, container, arrivée, altitude, score SCA, humidité, densité, calibre, coût rendu entrepôt, emplacement et notes qualité.
 - Fiches fournisseurs enrichies : délai moyen, fiabilité, Incoterms, conditions de paiement et certifications.
@@ -117,4 +118,4 @@ La prochaine version devra ajouter :
 - l'import CSV des grains et fournisseurs complets ;
 - une vraie gestion multi-utilisateurs si plusieurs personnes doivent avoir leur propre compte ;
 - un schéma relationnel complet si l'outil sort du périmètre prototype ;
-- des écrans d'édition/suppression plus complets pour corriger les référentiels après saisie.
+- un journal détaillé des erreurs d'import et des modifications.

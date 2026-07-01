@@ -514,8 +514,23 @@ select:disabled {
   display: grid;
   gap: 8px;
   margin: 0;
-  padding: 0 12px 12px 30px;
+  padding: 0 12px 12px;
   color: var(--ink);
+  list-style: none;
+}
+
+.country-item,
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.country-item {
+  justify-content: space-between;
+  min-height: 34px;
+  padding-left: 4px;
 }
 
 .nested-grid {
@@ -554,6 +569,10 @@ select:disabled {
   padding-right: 10px;
   padding-left: 10px;
   font-size: 0.82rem;
+}
+
+.row-actions {
+  min-width: 168px;
 }
 
 .align-end {
