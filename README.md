@@ -71,6 +71,15 @@ Endpoints utiles :
 - `GET /api/state` : charge l'état sauvegardé.
 - `POST /api/state` : sauvegarde l'état courant.
 
+Routes de l'interface :
+
+- `/` : tableau de bord.
+- `/tarifs` : tarifs datés.
+- `/calculateur` : calculateur de coût.
+- `/previsions` : prévisions.
+- `/production` : production.
+- `/donnees` : données et référentiels.
+
 ## Limite importante
 
 Cette version persiste les données dans PostgreSQL, mais sans authentification. Il faut donc garder le déploiement privé tant que l'accès utilisateur n'est pas ajouté.

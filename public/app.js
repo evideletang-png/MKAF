@@ -3,6 +3,19 @@ const STORAGE_KEY = "cout-cafe-prototype-v1";
 const today = new Date().toISOString().slice(0, 10);
 let storageMode = "browser";
 
+const viewRoutes = {
+  dashboard: "/",
+  prices: "/tarifs",
+  calculator: "/calculateur",
+  forecast: "/previsions",
+  production: "/production",
+  data: "/donnees"
+};
+
+const routeViews = Object.fromEntries(
+  Object.entries(viewRoutes).map(([viewId, route]) => [route, viewId])
+);
+
 function addDays(date, days) {
   const next = new Date(`${date}T12:00:00Z`);
   next.setUTCDate(next.getUTCDate() + days);
@@ -1922,13 +1935,43 @@ function exportData() {
 }
 
 function setupNavigation() {
+  function normalizePath(pathname) {
+    if (!pathname || pathname === "/") return "/";
+    return pathname.replace(/\/+$/, "") || "/";
+  }
+
+  function routeToView(pathname) {
+    return routeViews[normalizePath(pathname)] || "dashboard";
+  }
+
+  function activateView(viewId) {
+    els.navTabs.forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
+    els.views.forEach((view) => view.classList.toggle("active", view.id === viewId));
+  }
+
+  function navigateToView(viewId) {
+    activateView(viewId);
+    const route = viewRoutes[viewId] || "/";
+    if (normalizePath(window.location.pathname) !== route) {
+      window.history.pushState({ viewId }, "", route);
+    }
+  }
+
   els.navTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      const viewId = tab.dataset.view;
-      els.navTabs.forEach((item) => item.classList.toggle("active", item === tab));
-      els.views.forEach((view) => view.classList.toggle("active", view.id === viewId));
+      navigateToView(tab.dataset.view);
     });
   });
+
+  window.addEventListener("popstate", () => {
+    activateView(routeToView(window.location.pathname));
+  });
+
+  const initialViewId = routeToView(window.location.pathname);
+  activateView(initialViewId);
+  if (normalizePath(window.location.pathname) !== (viewRoutes[initialViewId] || "/")) {
+    window.history.replaceState({ viewId: initialViewId }, "", viewRoutes[initialViewId] || "/");
+  }
 }
 
 els.countryForm.addEventListener("submit", addCountry);

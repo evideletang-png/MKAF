@@ -53,6 +53,16 @@ function sendJson(response, statusCode, data) {
   response.end(JSON.stringify(data));
 }
 
+async function sendStaticFile(request, response, filePath) {
+  const content = await readFile(filePath);
+  const contentType = mimeTypes[extname(filePath)] || "application/octet-stream";
+  response.writeHead(200, {
+    "content-type": contentType,
+    "cache-control": "no-store"
+  });
+  response.end(request.method === "HEAD" ? undefined : content);
+}
+
 async function readJsonBody(request) {
   const chunks = [];
   let size = 0;
@@ -242,14 +252,13 @@ async function handleStaticRequest(request, response, pathname) {
       return;
     }
 
-    const content = await readFile(filePath);
-    const contentType = mimeTypes[extname(filePath)] || "application/octet-stream";
-    response.writeHead(200, {
-      "content-type": contentType,
-      "cache-control": "no-store"
-    });
-    response.end(request.method === "HEAD" ? undefined : content);
+    await sendStaticFile(request, response, filePath);
   } catch {
+    if (extname(pathname) === "") {
+      await sendStaticFile(request, response, join(publicDir, "index.html"));
+      return;
+    }
+
     response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     response.end("Not found");
   }
