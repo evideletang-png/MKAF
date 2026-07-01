@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +11,13 @@ const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || "0.0.0.0";
 const databaseUrl = process.env.DATABASE_URL;
 const stateKey = "default";
+const authUsername = process.env.AUTH_USERNAME || "admin";
+const authPassword = process.env.AUTH_PASSWORD || "";
+const authPasswordHash = process.env.AUTH_PASSWORD_HASH || "";
+const sessionSecret = process.env.SESSION_SECRET || randomBytes(48).toString("hex");
+const sessionCookieName = "mkaf_session";
+const sessionDurationSeconds = 8 * 60 * 60;
+const authConfigured = Boolean(authPassword || authPasswordHash);
 
 function createPool(connectionString) {
   const parsedUrl = new URL(connectionString);
@@ -51,6 +59,138 @@ function sendJson(response, statusCode, data) {
     "cache-control": "no-store"
   });
   response.end(JSON.stringify(data));
+}
+
+function sendJsonWithHeaders(response, statusCode, data, headers = {}) {
+  response.writeHead(statusCode, {
+    ...headers,
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store"
+  });
+  response.end(JSON.stringify(data));
+}
+
+function parseCookies(request) {
+  const header = request.headers.cookie || "";
+
+  return header.split(";").reduce((cookies, part) => {
+    const [rawName, ...rawValueParts] = part.trim().split("=");
+    if (!rawName) return cookies;
+
+    try {
+      cookies[rawName] = decodeURIComponent(rawValueParts.join("=") || "");
+    } catch {
+      cookies[rawName] = "";
+    }
+    return cookies;
+  }, {});
+}
+
+function safeCompare(left, right) {
+  if (!left || !right) return false;
+
+  const leftHash = createHash("sha256").update(String(left)).digest();
+  const rightHash = createHash("sha256").update(String(right)).digest();
+  return timingSafeEqual(leftHash, rightHash);
+}
+
+function hashPassword(password, salt) {
+  return scryptSync(password, salt, 64).toString("hex");
+}
+
+function verifyPassword(password) {
+  if (authPasswordHash) {
+    const [algorithm, salt, expectedHash] = authPasswordHash.split(":");
+    if (algorithm !== "scrypt" || !salt || !expectedHash) {
+      console.error("AUTH_PASSWORD_HASH doit utiliser le format scrypt:<salt>:<hash>.");
+      return false;
+    }
+
+    return safeCompare(hashPassword(password, salt), expectedHash);
+  }
+
+  return safeCompare(password, authPassword);
+}
+
+function signSessionPayload(encodedPayload) {
+  return createHmac("sha256", sessionSecret).update(encodedPayload).digest("base64url");
+}
+
+function createSessionValue(username) {
+  const payload = {
+    username,
+    exp: Math.floor(Date.now() / 1000) + sessionDurationSeconds
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${encodedPayload}.${signSessionPayload(encodedPayload)}`;
+}
+
+function readSession(request) {
+  const cookieValue = parseCookies(request)[sessionCookieName];
+  if (!cookieValue) return null;
+
+  const [encodedPayload, signature] = cookieValue.split(".");
+  if (!encodedPayload || !signature || !safeCompare(signature, signSessionPayload(encodedPayload))) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
+    if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) return null;
+    if (payload.username !== authUsername) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function isAuthenticated(request) {
+  return authConfigured && Boolean(readSession(request));
+}
+
+function isSecureRequest(request) {
+  const forwardedProto = String(request.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+  return forwardedProto === "https" || Boolean(request.socket.encrypted);
+}
+
+function sessionCookie(value, request) {
+  const secure = isSecureRequest(request) ? "; Secure" : "";
+  return `${sessionCookieName}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${sessionDurationSeconds}${secure}`;
+}
+
+function clearSessionCookie(request) {
+  const secure = isSecureRequest(request) ? "; Secure" : "";
+  return `${sessionCookieName}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`;
+}
+
+function sendRedirect(response, location) {
+  response.writeHead(302, {
+    location,
+    "cache-control": "no-store"
+  });
+  response.end();
+}
+
+function isPublicPath(pathname) {
+  return (
+    pathname === "/login" ||
+    pathname === "/login.html" ||
+    pathname === "/styles.css" ||
+    pathname === "/favicon.ico" ||
+    pathname.startsWith("/assets/")
+  );
+}
+
+function safeNextPath(value) {
+  if (!value || typeof value !== "string") return "/";
+  if (!value.startsWith("/") || value.startsWith("//") || /[\r\n]/.test(value)) return "/";
+
+  try {
+    const nextUrl = new URL(value, "http://localhost");
+    return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+  } catch {
+    return "/";
+  }
 }
 
 async function sendStaticFile(request, response, filePath) {
@@ -151,6 +291,54 @@ async function handleHealth(response) {
   }
 }
 
+function handleSession(request, response) {
+  const session = readSession(request);
+  sendJson(response, 200, {
+    ok: true,
+    authenticated: Boolean(session),
+    username: session?.username || null,
+    authConfigured
+  });
+}
+
+async function handleLogin(request, response) {
+  if (!authConfigured) {
+    sendJson(response, 503, {
+      ok: false,
+      message: "L'authentification n'est pas configuree. Ajoutez AUTH_PASSWORD ou AUTH_PASSWORD_HASH dans Railway."
+    });
+    return;
+  }
+
+  const body = await readJsonBody(request);
+  const username = typeof body.username === "string" ? body.username.trim() : "";
+  const password = typeof body.password === "string" ? body.password : "";
+
+  if (username !== authUsername || !verifyPassword(password)) {
+    sendJson(response, 401, {
+      ok: false,
+      message: "Identifiant ou mot de passe incorrect."
+    });
+    return;
+  }
+
+  const redirectTo = safeNextPath(body.next);
+  sendJsonWithHeaders(response, 200, {
+    ok: true,
+    redirectTo
+  }, {
+    "set-cookie": sessionCookie(createSessionValue(username), request)
+  });
+}
+
+function handleLogout(request, response) {
+  sendJsonWithHeaders(response, 200, {
+    ok: true
+  }, {
+    "set-cookie": clearSessionCookie(request)
+  });
+}
+
 async function handleGetState(response) {
   const canUseDatabase = await ensureDatabase(response);
   if (!canUseDatabase) return;
@@ -214,6 +402,37 @@ async function handleApiRequest(request, response, pathname) {
       return;
     }
 
+    if (pathname === "/api/session" && request.method === "GET") {
+      handleSession(request, response);
+      return;
+    }
+
+    if (pathname === "/api/login" && request.method === "POST") {
+      await handleLogin(request, response);
+      return;
+    }
+
+    if (pathname === "/api/logout" && request.method === "POST") {
+      handleLogout(request, response);
+      return;
+    }
+
+    if (!authConfigured) {
+      sendJson(response, 503, {
+        ok: false,
+        message: "L'authentification n'est pas configuree."
+      });
+      return;
+    }
+
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, {
+        ok: false,
+        message: "Authentification requise."
+      });
+      return;
+    }
+
     if (pathname === "/api/state" && request.method === "GET") {
       await handleGetState(response);
       return;
@@ -237,15 +456,31 @@ async function handleApiRequest(request, response, pathname) {
   }
 }
 
-async function handleStaticRequest(request, response, pathname) {
+async function handleStaticRequest(request, response, requestUrl) {
   if (!["GET", "HEAD"].includes(request.method || "")) {
     response.writeHead(405, { "content-type": "text/plain; charset=utf-8" });
     response.end("Method not allowed");
     return;
   }
 
+  const pathname = requestUrl.pathname;
+  const publicPath = isPublicPath(pathname);
+  const authenticated = isAuthenticated(request);
+
+  if ((pathname === "/login" || pathname === "/login.html") && authenticated) {
+    sendRedirect(response, "/");
+    return;
+  }
+
+  if (!publicPath && !authenticated) {
+    const nextPath = safeNextPath(`${pathname}${requestUrl.search}`);
+    sendRedirect(response, `/login?next=${encodeURIComponent(nextPath)}`);
+    return;
+  }
+
   try {
-    const filePath = resolveStaticPath(pathname);
+    const staticPathname = pathname === "/login" ? "/login.html" : pathname;
+    const filePath = resolveStaticPath(staticPathname);
     if (!filePath.startsWith(publicDir)) {
       response.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
       response.end("Forbidden");
@@ -283,10 +518,11 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  await handleStaticRequest(request, response, requestUrl.pathname);
+  await handleStaticRequest(request, response, requestUrl);
 });
 
 server.listen(port, host, () => {
   console.log(`Outil cout cafe disponible sur http://${host}:${port}`);
   console.log(`Stockage: ${pool ? "PostgreSQL" : "navigateur"}`);
+  console.log(`Authentification: ${authConfigured ? "active" : "non configuree"}`);
 });

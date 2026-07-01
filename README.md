@@ -22,11 +22,12 @@ Prototype interne Max Cafés pour piloter les grains, les fournisseurs, les asse
 - Création de batchs de production avec coût figé, machine, opérateur, perte réelle et notes de courbe.
 - Sauvegarde PostgreSQL sur Railway via `DATABASE_URL`.
 - Sauvegarde locale dans le navigateur en mode secours si aucune base n'est configurée.
+- Authentification par identifiant / mot de passe, session signée et cookie HTTP-only.
 
 ## Lancer en local
 
 ```bash
-npm start
+AUTH_PASSWORD="un-mot-de-passe-local" npm start
 ```
 
 Puis ouvrir :
@@ -51,8 +52,29 @@ L'application est compatible Railway telle quelle :
 3. Laisser Railway détecter l'application Node.js.
 4. Ajouter un service PostgreSQL dans le même projet Railway.
 5. Vérifier que le service web reçoit bien la variable `DATABASE_URL`.
-6. Vérifier que la commande de démarrage est `npm start`.
-7. Générer un domaine public ou privé selon le besoin.
+6. Ajouter les variables d'authentification ci-dessous.
+7. Vérifier que la commande de démarrage est `npm start`.
+8. Générer un domaine public ou privé selon le besoin.
+
+Variables Railway à configurer :
+
+- `AUTH_USERNAME` : identifiant de connexion. Par défaut : `admin`.
+- `AUTH_PASSWORD` : mot de passe en clair, simple à gérer pour une première version.
+- `SESSION_SECRET` : secret long utilisé pour signer les sessions.
+
+Pour générer un secret de session :
+
+```bash
+openssl rand -hex 48
+```
+
+Option plus robuste : remplacer `AUTH_PASSWORD` par `AUTH_PASSWORD_HASH`.
+
+```bash
+node -e 'const {randomBytes,scryptSync}=require("crypto"); const password=process.argv[1]; const salt=randomBytes(16).toString("hex"); const hash=scryptSync(password,salt,64).toString("hex"); console.log("scrypt:"+salt+":"+hash);' 'mot-de-passe'
+```
+
+Copier la sortie complète dans `AUTH_PASSWORD_HASH`, au format `scrypt:<salt>:<hash>`.
 
 ## Base de données
 
@@ -71,11 +93,15 @@ Pour cette V1, l'état complet de l'outil est stocké dans une colonne `JSONB`. 
 Endpoints utiles :
 
 - `GET /api/health` : vérifie si la base est connectée.
-- `GET /api/state` : charge l'état sauvegardé.
-- `POST /api/state` : sauvegarde l'état courant.
+- `GET /api/session` : vérifie l'état de connexion.
+- `POST /api/login` : ouvre une session.
+- `POST /api/logout` : ferme la session.
+- `GET /api/state` : charge l'état sauvegardé, protégé par login.
+- `POST /api/state` : sauvegarde l'état courant, protégé par login.
 
 Routes de l'interface :
 
+- `/login` : connexion.
 - `/` : tableau de bord.
 - `/tarifs` : tarifs datés.
 - `/calculateur` : calculateur de coût.
@@ -83,13 +109,9 @@ Routes de l'interface :
 - `/production` : production.
 - `/donnees` : données et référentiels.
 
-## Limite importante
-
-Cette version persiste les données dans PostgreSQL, mais sans authentification. Il faut donc garder le déploiement privé tant que l'accès utilisateur n'est pas ajouté.
-
 La prochaine version devra ajouter :
 
-- une authentification ;
 - des imports/exports CSV ;
+- une vraie gestion multi-utilisateurs si plusieurs personnes doivent avoir leur propre compte ;
 - un schéma relationnel complet si l'outil sort du périmètre prototype ;
 - des écrans d'édition/suppression plus complets pour corriger les référentiels après saisie.

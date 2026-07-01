@@ -484,7 +484,8 @@ const els = {
   historyChannel: document.querySelector("#historyChannel"),
   historyRows: document.querySelector("#historyRows"),
   historyRowsCount: document.querySelector("#historyRowsCount"),
-  exportData: document.querySelector("#exportData")
+  exportData: document.querySelector("#exportData"),
+  logoutButton: document.querySelector("#logoutButton")
 };
 
 function normalizeState(candidate) {
@@ -564,6 +565,17 @@ function saveBrowserState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function redirectToLogin() {
+  const nextPath = `${window.location.pathname}${window.location.search}`;
+  window.location.assign(`/login?next=${encodeURIComponent(nextPath)}`);
+}
+
+function isAuthExpired(response) {
+  if (response.status !== 401) return false;
+  redirectToLogin();
+  return true;
+}
+
 async function loadState() {
   const browserState = loadBrowserState();
   state = browserState;
@@ -573,6 +585,7 @@ async function loadState() {
       headers: { accept: "application/json" }
     });
 
+    if (isAuthExpired(response)) return;
     if (!response.ok) throw new Error("API state unavailable");
 
     const payload = await response.json();
@@ -616,6 +629,7 @@ async function saveState() {
       body: JSON.stringify({ state })
     });
 
+    if (isAuthExpired(response)) return;
     if (!response.ok) throw new Error("Database save failed");
     setStorageStatus("Base synchronisée", "success");
   } catch {
@@ -2587,6 +2601,17 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
+async function logout() {
+  try {
+    await fetch("/api/logout", {
+      method: "POST",
+      headers: { accept: "application/json" }
+    });
+  } finally {
+    window.location.assign("/login");
+  }
+}
+
 function normalizePath(pathname) {
   if (!pathname || pathname === "/") return "/";
   return pathname.replace(/\/+$/, "") || "/";
@@ -2697,6 +2722,7 @@ els.calculatorForm.addEventListener("submit", runCalculator);
 els.forecastForm.addEventListener("submit", runForecast);
 els.batchForm.addEventListener("submit", addBatch);
 els.exportData.addEventListener("click", exportData);
+els.logoutButton.addEventListener("click", logout);
 
 async function initializeApp() {
   setupNavigation();
