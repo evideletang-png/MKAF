@@ -10,7 +10,8 @@ const dataSectionRoutes = {
   beans: "/donnees/grains",
   blends: "/donnees/assemblages",
   stocks: "/donnees/stocks",
-  history: "/donnees/activite-n-1"
+  history: "/donnees/activite-n-1",
+  imports: "/donnees/imports"
 };
 
 const viewRoutes = {
@@ -485,6 +486,12 @@ const els = {
   historyRows: document.querySelector("#historyRows"),
   historyRowsCount: document.querySelector("#historyRowsCount"),
   exportData: document.querySelector("#exportData"),
+  exportCsvButtons: document.querySelectorAll("[data-export-csv]"),
+  historyImportForm: document.querySelector("#historyImportForm"),
+  historyImportFile: document.querySelector("#historyImportFile"),
+  historyImportMode: document.querySelector("#historyImportMode"),
+  downloadHistoryTemplate: document.querySelector("#downloadHistoryTemplate"),
+  importStatus: document.querySelector("#importStatus"),
   logoutButton: document.querySelector("#logoutButton")
 };
 
@@ -667,6 +674,18 @@ function toFiniteNumber(value) {
   if (value === null || value === undefined || value === "") return NaN;
   const number = Number(value);
   return Number.isFinite(number) ? number : NaN;
+}
+
+function parseLocaleNumber(value) {
+  if (value === null || value === undefined) return NaN;
+  const normalized = String(value).trim().replace(/\s/g, "").replace(",", ".");
+  if (!normalized) return NaN;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : NaN;
+}
+
+function isIsoDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
 }
 
 function formatDays(value) {
@@ -2589,16 +2608,418 @@ async function addBatch(event) {
   renderAll();
 }
 
-function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+function downloadTextFile(filename, content, type) {
+  const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `outil-cout-cafe-${today}.json`;
+  link.download = filename;
   document.body.append(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function exportData() {
+  downloadTextFile(`outil-cout-cafe-${today}.json`, JSON.stringify(state, null, 2), "application/json");
+}
+
+function csvEscape(value, delimiter = ";") {
+  const text = value === null || value === undefined ? "" : String(value);
+  const needsQuotes = text.includes(delimiter) || text.includes("\n") || text.includes("\r") || text.includes('"');
+  const escaped = text.replaceAll('"', '""');
+  return needsQuotes ? `"${escaped}"` : escaped;
+}
+
+function buildCsv(columns, rows, delimiter = ";") {
+  const header = columns.map((column) => csvEscape(column.label, delimiter)).join(delimiter);
+  const body = rows.map((row) => {
+    return columns.map((column) => csvEscape(row[column.key], delimiter)).join(delimiter);
+  });
+  return `\ufeff${[header, ...body].join("\n")}`;
+}
+
+function downloadCsv(filename, columns, rows) {
+  downloadTextFile(filename, buildCsv(columns, rows), "text/csv;charset=utf-8");
+}
+
+function exportBeansCsv() {
+  const rows = state.beans.map((bean) => {
+    const country = getById("countries", bean.countryId);
+    const supplier = getById("suppliers", bean.defaultSupplierId);
+    return {
+      grain: bean.commercialName,
+      pays: country?.name || "",
+      region_monde: country?.region || "",
+      fournisseur: supplier?.name || "",
+      type: bean.species || "",
+      process: bean.process || "",
+      region_origine: bean.region || "",
+      variete: bean.variety || "",
+      recolte: bean.harvestYear || "",
+      container: bean.container || "",
+      date_arrivee: bean.arrivalDate || "",
+      altitude_m: bean.altitudeM || "",
+      score_sca: bean.scaScore || "",
+      humidite_pct: bean.moisturePct || "",
+      densite: bean.density || "",
+      calibre: bean.screenSize || "",
+      cout_rendu_kg: bean.landedCostPerKg || "",
+      emplacement: bean.location || "",
+      notes_qualite: bean.qualityNotes || ""
+    };
+  });
+
+  downloadCsv(`mkaf-grains-${today}.csv`, [
+    { key: "grain", label: "grain" },
+    { key: "pays", label: "pays" },
+    { key: "region_monde", label: "region_monde" },
+    { key: "fournisseur", label: "fournisseur" },
+    { key: "type", label: "type" },
+    { key: "process", label: "process" },
+    { key: "region_origine", label: "region_origine" },
+    { key: "variete", label: "variete" },
+    { key: "recolte", label: "recolte" },
+    { key: "container", label: "container" },
+    { key: "date_arrivee", label: "date_arrivee" },
+    { key: "altitude_m", label: "altitude_m" },
+    { key: "score_sca", label: "score_sca" },
+    { key: "humidite_pct", label: "humidite_pct" },
+    { key: "densite", label: "densite" },
+    { key: "calibre", label: "calibre" },
+    { key: "cout_rendu_kg", label: "cout_rendu_kg" },
+    { key: "emplacement", label: "emplacement" },
+    { key: "notes_qualite", label: "notes_qualite" }
+  ], rows);
+}
+
+function exportSuppliersCsv() {
+  const rows = state.suppliers.map((supplier) => ({
+    fournisseur: supplier.name,
+    devise: supplier.defaultCurrency || "EUR",
+    delai_moyen_jours: supplier.averageLeadTimeDays || "",
+    fiabilite_pct: supplier.reliabilityPct || "",
+    incoterms: supplier.incoterms || "",
+    paiement: supplier.paymentTerms || "",
+    certifications: supplier.certifications || ""
+  }));
+
+  downloadCsv(`mkaf-fournisseurs-${today}.csv`, [
+    { key: "fournisseur", label: "fournisseur" },
+    { key: "devise", label: "devise" },
+    { key: "delai_moyen_jours", label: "delai_moyen_jours" },
+    { key: "fiabilite_pct", label: "fiabilite_pct" },
+    { key: "incoterms", label: "incoterms" },
+    { key: "paiement", label: "paiement" },
+    { key: "certifications", label: "certifications" }
+  ], rows);
+}
+
+function exportPricesCsv() {
+  const rows = state.prices.map((price) => {
+    const bean = getById("beans", price.beanId);
+    const supplier = getById("suppliers", price.supplierId);
+    return {
+      grain: bean?.commercialName || "",
+      fournisseur: supplier?.name || "",
+      prix_kg: price.pricePerKg,
+      devise: price.currency || "EUR",
+      valable_du: price.validFrom || "",
+      valable_au: price.validTo || "",
+      note: price.notes || ""
+    };
+  });
+
+  downloadCsv(`mkaf-tarifs-${today}.csv`, [
+    { key: "grain", label: "grain" },
+    { key: "fournisseur", label: "fournisseur" },
+    { key: "prix_kg", label: "prix_kg" },
+    { key: "devise", label: "devise" },
+    { key: "valable_du", label: "valable_du" },
+    { key: "valable_au", label: "valable_au" },
+    { key: "note", label: "note" }
+  ], rows);
+}
+
+function exportStocksCsv() {
+  const rows = state.beans.map((bean) => {
+    const stockInfo = getStockInfo(bean);
+    return {
+      grain: bean.commercialName,
+      stock_kg: stockInfo.quantityKg,
+      commande_kg: stockInfo.incomingKg,
+      eta: stockInfo.eta,
+      conso_jour_kg: stockInfo.averageDailyKg,
+      autonomie_jours: stockInfo.autonomyDays ?? "",
+      risque: stockInfo.risk,
+      valeur_stock_eur: stockInfo.stockValue ?? ""
+    };
+  });
+
+  downloadCsv(`mkaf-stocks-${today}.csv`, [
+    { key: "grain", label: "grain" },
+    { key: "stock_kg", label: "stock_kg" },
+    { key: "commande_kg", label: "commande_kg" },
+    { key: "eta", label: "eta" },
+    { key: "conso_jour_kg", label: "conso_jour_kg" },
+    { key: "autonomie_jours", label: "autonomie_jours" },
+    { key: "risque", label: "risque" },
+    { key: "valeur_stock_eur", label: "valeur_stock_eur" }
+  ], rows);
+}
+
+function historicalRowsForCsv() {
+  return [...(state.historicalOrders || [])]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((order) => {
+      const blend = getById("blends", order.blendId);
+      return {
+        date: order.date,
+        assemblage: blend?.name || "",
+        kg_torrefies: order.roastedKg,
+        canal: order.channel || "mixte"
+      };
+    });
+}
+
+function exportHistoryCsv() {
+  downloadCsv(`mkaf-activite-n-1-${today}.csv`, [
+    { key: "date", label: "date" },
+    { key: "assemblage", label: "assemblage" },
+    { key: "kg_torrefies", label: "kg_torrefies" },
+    { key: "canal", label: "canal" }
+  ], historicalRowsForCsv());
+}
+
+function exportForecastCsv() {
+  const forecast = calculateForecast(state.forecastSettings);
+  const rows = forecast.dailyRows.map((row) => ({
+    date: row.date,
+    reference_n1: row.n1Date,
+    kg_n1: row.n1Kg,
+    kg_prevu: row.forecastKg,
+    facteur_pct: (forecast.multiplier - 1) * 100,
+    confiance: row.confidence
+  }));
+
+  downloadCsv(`mkaf-previsions-${today}.csv`, [
+    { key: "date", label: "date" },
+    { key: "reference_n1", label: "reference_n1" },
+    { key: "kg_n1", label: "kg_n1" },
+    { key: "kg_prevu", label: "kg_prevu" },
+    { key: "facteur_pct", label: "facteur_pct" },
+    { key: "confiance", label: "confiance" }
+  ], rows);
+}
+
+function exportCsv(event) {
+  const button = event.target.closest("[data-export-csv]");
+  if (!button) return;
+
+  const exporters = {
+    beans: exportBeansCsv,
+    suppliers: exportSuppliersCsv,
+    prices: exportPricesCsv,
+    stocks: exportStocksCsv,
+    history: exportHistoryCsv,
+    forecast: exportForecastCsv
+  };
+
+  exporters[button.dataset.exportCsv]?.();
+}
+
+function detectCsvDelimiter(text) {
+  const firstLine = text.split(/\r?\n/).find((line) => line.trim()) || "";
+  const semicolonCount = (firstLine.match(/;/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  return semicolonCount >= commaCount ? ";" : ",";
+}
+
+function parseCsvRows(text) {
+  const delimiter = detectCsvDelimiter(text);
+  const rows = [];
+  let row = [];
+  let field = "";
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const nextChar = text[index + 1];
+
+    if (char === '"') {
+      if (quoted && nextChar === '"') {
+        field += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+      continue;
+    }
+
+    if (char === delimiter && !quoted) {
+      row.push(field.trim());
+      field = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && nextChar === "\n") index += 1;
+      row.push(field.trim());
+      rows.push(row);
+      row = [];
+      field = "";
+      continue;
+    }
+
+    field += char;
+  }
+
+  row.push(field.trim());
+  rows.push(row);
+  return rows.filter((item) => item.some((cell) => cell.trim() !== ""));
+}
+
+function normalizeCsvHeader(value) {
+  return slugify(value).replaceAll("-", "_");
+}
+
+function csvRecords(text) {
+  const rows = parseCsvRows(text.replace(/^\ufeff/, ""));
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map(normalizeCsvHeader);
+  return rows.slice(1).map((row) => {
+    return headers.reduce((record, header, index) => {
+      record[header] = row[index] || "";
+      return record;
+    }, {});
+  });
+}
+
+function csvValue(record, keys) {
+  const key = keys.find((candidate) => record[candidate] !== undefined);
+  return key ? record[key] : "";
+}
+
+function parseHistoricalImport(text) {
+  const records = csvRecords(text);
+  const errors = [];
+  const orders = [];
+
+  records.forEach((record, index) => {
+    const lineNumber = index + 2;
+    const date = csvValue(record, ["date", "jour"]);
+    const blendName = csvValue(record, ["assemblage", "melange", "recette", "blend"]);
+    const kg = parseLocaleNumber(csvValue(record, ["kg_torrefies", "kg_torrefie", "kg", "roasted_kg", "quantite", "quantite_kg"]));
+    const channel = csvValue(record, ["canal", "channel", "type"]) || "mixte";
+    const blend = findByName("blends", "name", blendName);
+
+    if (!isIsoDate(date)) {
+      errors.push(`Ligne ${lineNumber} : date invalide`);
+      return;
+    }
+
+    if (!blend) {
+      errors.push(`Ligne ${lineNumber} : assemblage introuvable`);
+      return;
+    }
+
+    if (!Number.isFinite(kg) || kg <= 0) {
+      errors.push(`Ligne ${lineNumber} : kg invalide`);
+      return;
+    }
+
+    orders.push({
+      id: createId("order", `${date}-${blend.id}-${channel}`),
+      date,
+      blendId: blend.id,
+      roastedKg: Number(kg.toFixed(3)),
+      channel: channel.trim() || "mixte"
+    });
+  });
+
+  return { orders, errors };
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", () => reject(reader.error));
+    reader.readAsText(file);
+  });
+}
+
+function setImportStatus(message, status = "muted") {
+  els.importStatus.textContent = message;
+  els.importStatus.className = `import-status ${status}`;
+}
+
+function downloadHistoryTemplate() {
+  const sampleBlend = state.blends[0]?.name || "Espresso Maison";
+  const rows = [
+    {
+      date: previousYearDate(today),
+      assemblage: sampleBlend,
+      kg_torrefies: "12.5",
+      canal: "boutique"
+    }
+  ];
+
+  downloadCsv(`modele-activite-n-1-${today}.csv`, [
+    { key: "date", label: "date" },
+    { key: "assemblage", label: "assemblage" },
+    { key: "kg_torrefies", label: "kg_torrefies" },
+    { key: "canal", label: "canal" }
+  ], rows);
+}
+
+async function importHistoricalOrders(event) {
+  event.preventDefault();
+
+  const file = els.historyImportFile.files[0];
+  if (!file) return;
+
+  try {
+    const text = await readFileAsText(file);
+    const { orders, errors } = parseHistoricalImport(text);
+
+    if (orders.length === 0) {
+      setImportStatus(errors[0] || "Aucune ligne importable.", "warning");
+      return;
+    }
+
+    let inserted = 0;
+    let updated = 0;
+
+    if (els.historyImportMode.value === "replace") {
+      state.historicalOrders = [];
+    }
+
+    orders.forEach((order) => {
+      const existing = state.historicalOrders.find((item) => {
+        return item.date === order.date && item.blendId === order.blendId && (item.channel || "mixte") === order.channel;
+      });
+
+      if (existing) {
+        existing.roastedKg = order.roastedKg;
+        updated += 1;
+      } else {
+        state.historicalOrders.push(order);
+        inserted += 1;
+      }
+    });
+
+    state.historicalOrders.sort((a, b) => b.date.localeCompare(a.date));
+    await saveState();
+    els.historyImportForm.reset();
+    renderAll();
+
+    const skipped = errors.length ? `, ${errors.length} ignorée(s)` : "";
+    setImportStatus(`${inserted} ajoutée(s), ${updated} mise(s) à jour${skipped}.`, errors.length ? "warning" : "success");
+  } catch {
+    setImportStatus("Import impossible.", "warning");
+  }
 }
 
 async function logout() {
@@ -2722,6 +3143,9 @@ els.calculatorForm.addEventListener("submit", runCalculator);
 els.forecastForm.addEventListener("submit", runForecast);
 els.batchForm.addEventListener("submit", addBatch);
 els.exportData.addEventListener("click", exportData);
+els.exportCsvButtons.forEach((button) => button.addEventListener("click", exportCsv));
+els.historyImportForm.addEventListener("submit", importHistoricalOrders);
+els.downloadHistoryTemplate.addEventListener("click", downloadHistoryTemplate);
 els.logoutButton.addEventListener("click", logout);
 
 async function initializeApp() {

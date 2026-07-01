@@ -561,6 +561,30 @@ select:disabled {
   justify-self: stretch;
 }
 
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.action-grid button {
+  width: 100%;
+}
+
+.import-status {
+  min-height: 24px;
+  margin: 12px 0 0;
+  font-weight: 750;
+}
+
+.import-status.success {
+  color: #2f6a3b;
+}
+
+.import-status.warning {
+  color: var(--accent-dark);
+}
+
 .table-wrap {
   max-width: 100%;
   overflow-x: auto;
@@ -715,7 +739,8 @@ th.numeric {
   .metric-grid,
   .form-grid,
   .form-grid.compact,
-  .form-grid.forecast-form {
+  .form-grid.forecast-form,
+  .action-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -735,7 +760,8 @@ th.numeric {
   .metric-grid,
   .form-grid,
   .form-grid.compact,
-  .form-grid.forecast-form {
+  .form-grid.forecast-form,
+  .action-grid {
     grid-template-columns: 1fr;
   }
 

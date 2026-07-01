@@ -431,6 +431,7 @@
             <button class="sub-tab" data-data-section="blends" type="button" role="tab" aria-selected="false">Assemblages</button>
             <button class="sub-tab" data-data-section="stocks" type="button" role="tab" aria-selected="false">Stocks</button>
             <button class="sub-tab" data-data-section="history" type="button" role="tab" aria-selected="false">Activité N-1</button>
+            <button class="sub-tab" data-data-section="imports" type="button" role="tab" aria-selected="false">Import / export</button>
           </div>
 
           <div class="data-section active" data-data-section-panel="references" role="tabpanel">
@@ -761,6 +762,46 @@
                 </table>
               </div>
             </section>
+          </div>
+
+          <div class="data-section" data-data-section-panel="imports" role="tabpanel">
+            <div class="section-grid">
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Exports CSV</h2>
+                </div>
+                <div class="action-grid">
+                  <button class="secondary" data-export-csv="beans" type="button">Grains</button>
+                  <button class="secondary" data-export-csv="suppliers" type="button">Fournisseurs</button>
+                  <button class="secondary" data-export-csv="prices" type="button">Tarifs</button>
+                  <button class="secondary" data-export-csv="stocks" type="button">Stocks</button>
+                  <button class="secondary" data-export-csv="history" type="button">Activité N-1</button>
+                  <button class="secondary" data-export-csv="forecast" type="button">Prévisions</button>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Import activité N-1</h2>
+                </div>
+                <form class="form-grid compact" id="historyImportForm">
+                  <label class="wide">
+                    Fichier CSV
+                    <input id="historyImportFile" type="file" accept=".csv,text/csv" required />
+                  </label>
+                  <label>
+                    Mode
+                    <select id="historyImportMode">
+                      <option value="upsert">Ajouter / mettre à jour</option>
+                      <option value="replace">Remplacer l'activité N-1</option>
+                    </select>
+                  </label>
+                  <button class="secondary align-end" id="downloadHistoryTemplate" type="button">Modèle CSV</button>
+                  <button class="primary align-end" type="submit">Importer</button>
+                </form>
+                <p class="import-status muted" id="importStatus" aria-live="polite"></p>
+              </section>
+            </div>
           </div>
         </section>
       </main>
