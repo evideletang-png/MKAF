@@ -2520,8 +2520,8 @@ function renderDataTables() {
           <th>Assemblage</th>
           <th>Composition</th>
           <th class="numeric">Perte</th>
-          <th class="numeric">Prix cible</th>
-          <th class="numeric">Seuil</th>
+          <th class="numeric">Prix cible / kg fini</th>
+          <th class="numeric">Alerte coût</th>
           <th class="numeric">Prod. possible</th>
           <th>Action</th>
         </tr>
