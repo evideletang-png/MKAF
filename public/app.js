@@ -395,7 +395,6 @@ const els = {
   views: document.querySelectorAll(".view"),
   dataQualityList: document.querySelector("#dataQualityList"),
   dataQualityCount: document.querySelector("#dataQualityCount"),
-  storageStatus: document.querySelector("#storageStatus"),
   metrics: document.querySelector("#metrics"),
   alertsList: document.querySelector("#alertsList"),
   alertCount: document.querySelector("#alertCount"),
@@ -623,12 +622,6 @@ function loadBrowserState() {
   }
 }
 
-function setStorageStatus(label, status = "muted") {
-  if (!els.storageStatus) return;
-  els.storageStatus.textContent = label;
-  els.storageStatus.className = `storage-status ${status}`;
-}
-
 function saveBrowserState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
@@ -661,7 +654,6 @@ async function loadState() {
       storageMode = "browser";
       const changed = hydrateReferenceData();
       if (changed) await saveState();
-      setStorageStatus("Mode navigateur", "muted");
       return;
     }
 
@@ -672,16 +664,12 @@ async function loadState() {
 
     if (!payload.state || changed) {
       await saveState();
-      setStorageStatus(changed ? "Référentiels branchés" : "Base initialisée", "success");
       return;
     }
-
-    setStorageStatus("Base connectée", "success");
   } catch {
     storageMode = "browser";
     const changed = hydrateReferenceData();
     if (changed) await saveState();
-    setStorageStatus("Base indisponible", "warning");
   }
 }
 
@@ -699,9 +687,7 @@ async function saveState() {
 
     if (isAuthExpired(response)) return;
     if (!response.ok) throw new Error("Database save failed");
-    setStorageStatus("Base synchronisée", "success");
   } catch {
-    setStorageStatus("Sauvegarde locale", "warning");
   }
 }
 
@@ -4947,7 +4933,6 @@ async function undoLastImport() {
 
   await saveState();
   renderAll();
-  setStorageStatus("Import annulé", "success");
 }
 
 async function logout() {
