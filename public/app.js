@@ -180,20 +180,6 @@ const seedState = {
   }
 };
 
-function buildEmptyState() {
-  return {
-    countries: [],
-    suppliers: [],
-    beans: [],
-    prices: [],
-    blends: [],
-    batches: [],
-    greenStocks: [],
-    historicalOrders: [],
-    forecastSettings: structuredClone(seedState.forecastSettings)
-  };
-}
-
 let state = structuredClone(seedState);
 
 const els = {
@@ -275,8 +261,6 @@ const els = {
   historyChannel: document.querySelector("#historyChannel"),
   historyRows: document.querySelector("#historyRows"),
   historyRowsCount: document.querySelector("#historyRowsCount"),
-  clearData: document.querySelector("#clearData"),
-  resetDemo: document.querySelector("#resetDemo"),
   exportData: document.querySelector("#exportData")
 };
 
@@ -1570,29 +1554,6 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
-async function resetDemo() {
-  const target = storageMode === "database" ? "la base partagée avec les données de démonstration" : "les données de démonstration";
-  const ok = window.confirm(`Recharger ${target} ? Les données actuelles seront remplacées.`);
-  if (!ok) return;
-  state = structuredClone(seedState);
-  await saveState();
-  setupDefaults();
-  renderAll();
-  renderCalculation(calculateBlend(els.calcBlend.value, els.calcDate.value), calculateBlend(els.calcBlend.value, els.compareDate.value));
-}
-
-async function clearData() {
-  const target = storageMode === "database" ? "la base partagée" : "les données locales";
-  const ok = window.confirm(`Démarrer avec une base vierge ? Cela remplace ${target}.`);
-  if (!ok) return;
-
-  state = buildEmptyState();
-  await saveState();
-  setupDefaults();
-  renderAll();
-  renderCalculation(calculateBlend(els.calcBlend.value, els.calcDate.value), null);
-}
-
 function setupNavigation() {
   els.navTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -1614,8 +1575,6 @@ els.calculatorForm.addEventListener("submit", runCalculator);
 els.forecastForm.addEventListener("submit", runForecast);
 els.batchForm.addEventListener("submit", addBatch);
 els.exportData.addEventListener("click", exportData);
-els.clearData.addEventListener("click", clearData);
-els.resetDemo.addEventListener("click", resetDemo);
 
 async function initializeApp() {
   setupNavigation();
