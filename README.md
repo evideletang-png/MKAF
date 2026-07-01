@@ -19,6 +19,7 @@ Prototype interne Max Cafés pour piloter les grains, les fournisseurs, les asse
 - Facteurs de prévision : croissance, saisonnalité, événements, météo, promos et stock de sécurité.
 - Conversion de la demande prévue en besoin de grains café par origine.
 - Imports CSV des fournisseurs, grains, activité N-1, tarifs et stocks, avec ajout / mise à jour ou remplacement selon le module.
+- Journal des imports avec sauvegarde automatique avant import, erreurs ligne par ligne et annulation du dernier import.
 - Exports CSV : grains, fournisseurs, tarifs, stocks, activité N-1 et prévisions.
 - Stocks intelligents : consommation moyenne, autonomie, commande en cours, ETA, risque de rupture, valeur immobilisée et journal de mouvements.
 - Alertes sur prix manquant, coût trop élevé, tarif bientôt expiré, autonomie courte, humidité élevée, score SCA faible et fiabilité fournisseur basse.
@@ -118,4 +119,4 @@ La prochaine version devra ajouter :
 
 - une vraie gestion multi-utilisateurs si plusieurs personnes doivent avoir leur propre compte ;
 - un schéma relationnel complet si l'outil sort du périmètre prototype ;
-- un journal détaillé des erreurs d'import et des modifications.
+- un journal détaillé des modifications manuelles.

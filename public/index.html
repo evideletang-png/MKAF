@@ -801,6 +801,30 @@
                 </div>
               </section>
 
+              <section class="panel full-span">
+                <div class="panel-heading">
+                  <h2>Journal des imports</h2>
+                  <button class="secondary" id="undoLastImport" type="button" disabled>Annuler le dernier import</button>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Fichier</th>
+                        <th class="numeric">Ajout</th>
+                        <th class="numeric">Mise à jour</th>
+                        <th class="numeric">Ignoré</th>
+                        <th>Erreurs</th>
+                        <th>Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody id="importLogRows"></tbody>
+                  </table>
+                </div>
+              </section>
+
               <section class="panel">
                 <div class="panel-heading">
                   <h2>Import fournisseurs</h2>

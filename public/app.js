@@ -126,6 +126,28 @@ const stockMovementTypes = {
   received: "Réception"
 };
 
+const importTypeLabels = {
+  suppliers: "Fournisseurs",
+  beans: "Grains",
+  history: "Activité N-1",
+  prices: "Tarifs",
+  stocks: "Stocks"
+};
+
+const businessStateKeys = [
+  "countries",
+  "suppliers",
+  "beans",
+  "otherSupplies",
+  "prices",
+  "blends",
+  "batches",
+  "greenStocks",
+  "stockMovements",
+  "historicalOrders",
+  "forecastSettings"
+];
+
 function addDays(date, days) {
   const next = new Date(`${date}T12:00:00Z`);
   next.setUTCDate(next.getUTCDate() + days);
@@ -351,6 +373,8 @@ const seedState = {
   ],
   stockMovements: [],
   historicalOrders: buildHistoricalOrders(),
+  importHistory: [],
+  lastImportBackup: null,
   forecastSettings: {
     startDate: "2026-07-01",
     horizonDays: 14,
@@ -503,6 +527,8 @@ const els = {
   historyRowsCount: document.querySelector("#historyRowsCount"),
   exportData: document.querySelector("#exportData"),
   exportCsvButtons: document.querySelectorAll("[data-export-csv]"),
+  importLogRows: document.querySelector("#importLogRows"),
+  undoLastImport: document.querySelector("#undoLastImport"),
   historyImportForm: document.querySelector("#historyImportForm"),
   historyImportFile: document.querySelector("#historyImportFile"),
   historyImportMode: document.querySelector("#historyImportMode"),
@@ -546,6 +572,8 @@ function normalizeState(candidate) {
     greenStocks: Array.isArray(candidate.greenStocks) ? candidate.greenStocks : base.greenStocks,
     stockMovements: Array.isArray(candidate.stockMovements) ? candidate.stockMovements : base.stockMovements,
     historicalOrders: Array.isArray(candidate.historicalOrders) ? candidate.historicalOrders : base.historicalOrders,
+    importHistory: Array.isArray(candidate.importHistory) ? candidate.importHistory : base.importHistory,
+    lastImportBackup: candidate.lastImportBackup && typeof candidate.lastImportBackup === "object" ? candidate.lastImportBackup : null,
     forecastSettings: {
       ...base.forecastSettings,
       ...(candidate.forecastSettings || {})
@@ -726,6 +754,16 @@ function formatDays(value) {
   if (!Number.isFinite(value)) return "-";
   if (value > 365) return "> 1 an";
   return `${Math.round(value)} j`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(date);
 }
 
 function getById(collection, id) {
@@ -2506,6 +2544,34 @@ function renderDataTables() {
     : emptyTableRow(5);
 }
 
+function renderImportHistory() {
+  if (!els.importLogRows) return;
+
+  const rows = [...(state.importHistory || [])].slice(0, 20);
+  els.undoLastImport.disabled = !state.lastImportBackup;
+
+  els.importLogRows.innerHTML = rows.length
+    ? rows
+        .map((entry) => {
+          const status = entry.status === "undone" ? "Annulé" : "Importé";
+          const errors = (entry.errors || []).slice(0, 3).join(" | ");
+          return `
+            <tr>
+              <td>${escapeHtml(formatDateTime(entry.createdAt))}</td>
+              <td>${escapeHtml(importTypeLabels[entry.type] || entry.type || "-")}</td>
+              <td>${escapeHtml(entry.fileName || "-")}</td>
+              <td class="numeric">${escapeHtml(String(entry.inserted || 0))}</td>
+              <td class="numeric">${escapeHtml(String(entry.updated || 0))}</td>
+              <td class="numeric">${escapeHtml(String(entry.skipped || 0))}</td>
+              <td>${escapeHtml(errors || "-")}</td>
+              <td>${escapeHtml(status)}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : emptyTableRow(8, "Aucun import enregistré");
+}
+
 function renderAll() {
   renderSelects();
   renderMetrics();
@@ -2518,6 +2584,7 @@ function renderAll() {
   renderForecast();
   renderBatches();
   renderDataTables();
+  renderImportHistory();
 }
 
 function setupDefaults() {
@@ -4018,6 +4085,50 @@ function setImportStatus(element, message, status = "muted") {
   element.className = `import-status ${status}`;
 }
 
+function createBusinessSnapshot() {
+  return businessStateKeys.reduce((snapshot, key) => {
+    snapshot[key] = structuredClone(state[key]);
+    return snapshot;
+  }, {});
+}
+
+function restoreBusinessSnapshot(snapshot) {
+  businessStateKeys.forEach((key) => {
+    if (snapshot[key] !== undefined) {
+      state[key] = structuredClone(snapshot[key]);
+    }
+  });
+}
+
+function recordImport({ type, fileName, mode = "", inserted = 0, updated = 0, skipped = 0, errors = [], snapshot }) {
+  const id = `import-${crypto.randomUUID()}`;
+  const createdAt = new Date().toISOString();
+
+  state.lastImportBackup = {
+    importId: id,
+    type,
+    fileName,
+    createdAt,
+    snapshot
+  };
+
+  state.importHistory = [
+    {
+      id,
+      createdAt,
+      type,
+      fileName,
+      mode,
+      inserted,
+      updated,
+      skipped,
+      errors: errors.slice(0, 20),
+      status: "imported"
+    },
+    ...(state.importHistory || [])
+  ].slice(0, 50);
+}
+
 function importErrorSuffix(errors) {
   if (errors.length === 0) return "";
   const preview = errors.slice(0, 2).join(" | ");
@@ -4254,11 +4365,14 @@ async function importSuppliers(event) {
   const file = els.supplierImportFile.files[0];
   if (!file) return;
 
+  const snapshot = createBusinessSnapshot();
+
   try {
     const text = await readFileAsText(file);
     const { suppliers, errors } = parseSupplierImport(text);
 
     if (suppliers.length === 0) {
+      restoreBusinessSnapshot(snapshot);
       setImportStatus(els.supplierImportStatus, errors[0] || "Aucune ligne importable.", "warning");
       return;
     }
@@ -4273,6 +4387,15 @@ async function importSuppliers(event) {
     });
 
     sortImportedReferences();
+    recordImport({
+      type: "suppliers",
+      fileName: file.name,
+      inserted,
+      updated,
+      skipped: errors.length,
+      errors,
+      snapshot
+    });
     await saveState();
     els.supplierImportForm.reset();
     renderAll();
@@ -4283,6 +4406,7 @@ async function importSuppliers(event) {
       errors.length ? "warning" : "success"
     );
   } catch {
+    restoreBusinessSnapshot(snapshot);
     setImportStatus(els.supplierImportStatus, "Import impossible.", "warning");
   }
 }
@@ -4293,11 +4417,14 @@ async function importBeans(event) {
   const file = els.beanImportFile.files[0];
   if (!file) return;
 
+  const snapshot = createBusinessSnapshot();
+
   try {
     const text = await readFileAsText(file);
     const { beans, errors } = parseBeanImport(text);
 
     if (beans.length === 0) {
+      restoreBusinessSnapshot(snapshot);
       setImportStatus(els.beanImportStatus, errors[0] || "Aucune ligne importable.", "warning");
       return;
     }
@@ -4312,6 +4439,15 @@ async function importBeans(event) {
     });
 
     sortImportedReferences();
+    recordImport({
+      type: "beans",
+      fileName: file.name,
+      inserted,
+      updated,
+      skipped: errors.length,
+      errors,
+      snapshot
+    });
     await saveState();
     els.beanImportForm.reset();
     renderAll();
@@ -4322,6 +4458,7 @@ async function importBeans(event) {
       errors.length ? "warning" : "success"
     );
   } catch {
+    restoreBusinessSnapshot(snapshot);
     setImportStatus(els.beanImportStatus, "Import impossible.", "warning");
   }
 }
@@ -4332,11 +4469,14 @@ async function importHistoricalOrders(event) {
   const file = els.historyImportFile.files[0];
   if (!file) return;
 
+  const snapshot = createBusinessSnapshot();
+
   try {
     const text = await readFileAsText(file);
     const { orders, errors } = parseHistoricalImport(text);
 
     if (orders.length === 0) {
+      restoreBusinessSnapshot(snapshot);
       setImportStatus(els.historyImportStatus, errors[0] || "Aucune ligne importable.", "warning");
       return;
     }
@@ -4363,6 +4503,16 @@ async function importHistoricalOrders(event) {
     });
 
     state.historicalOrders.sort((a, b) => b.date.localeCompare(a.date));
+    recordImport({
+      type: "history",
+      fileName: file.name,
+      mode: els.historyImportMode.value,
+      inserted,
+      updated,
+      skipped: errors.length,
+      errors,
+      snapshot
+    });
     await saveState();
     els.historyImportForm.reset();
     renderAll();
@@ -4370,6 +4520,7 @@ async function importHistoricalOrders(event) {
     const skipped = errors.length ? `, ${errors.length} ignorée(s)` : "";
     setImportStatus(els.historyImportStatus, `${inserted} ajoutée(s), ${updated} mise(s) à jour${skipped}.`, errors.length ? "warning" : "success");
   } catch {
+    restoreBusinessSnapshot(snapshot);
     setImportStatus(els.historyImportStatus, "Import impossible.", "warning");
   }
 }
@@ -4380,11 +4531,14 @@ async function importPrices(event) {
   const file = els.priceImportFile.files[0];
   if (!file) return;
 
+  const snapshot = createBusinessSnapshot();
+
   try {
     const text = await readFileAsText(file);
     const { prices, errors } = parsePriceImport(text);
 
     if (prices.length === 0) {
+      restoreBusinessSnapshot(snapshot);
       setImportStatus(els.priceImportStatus, errors[0] || "Aucune ligne importable.", "warning");
       return;
     }
@@ -4418,6 +4572,16 @@ async function importPrices(event) {
     });
 
     state.prices.sort((a, b) => b.validFrom.localeCompare(a.validFrom));
+    recordImport({
+      type: "prices",
+      fileName: file.name,
+      mode: els.priceImportMode.value,
+      inserted,
+      updated,
+      skipped: errors.length,
+      errors,
+      snapshot
+    });
     await saveState();
     els.priceImportForm.reset();
     renderAll();
@@ -4425,6 +4589,7 @@ async function importPrices(event) {
     const skipped = errors.length ? `, ${errors.length} ignorée(s)` : "";
     setImportStatus(els.priceImportStatus, `${inserted} ajouté(s), ${updated} mis à jour${skipped}.`, errors.length ? "warning" : "success");
   } catch {
+    restoreBusinessSnapshot(snapshot);
     setImportStatus(els.priceImportStatus, "Import impossible.", "warning");
   }
 }
@@ -4435,11 +4600,14 @@ async function importStocks(event) {
   const file = els.stockImportFile.files[0];
   if (!file) return;
 
+  const snapshot = createBusinessSnapshot();
+
   try {
     const text = await readFileAsText(file);
     const { stocks, errors } = parseStockImport(text);
 
     if (stocks.length === 0) {
+      restoreBusinessSnapshot(snapshot);
       setImportStatus(els.stockImportStatus, errors[0] || "Aucune ligne importable.", "warning");
       return;
     }
@@ -4464,6 +4632,15 @@ async function importStocks(event) {
       });
     });
 
+    recordImport({
+      type: "stocks",
+      fileName: file.name,
+      mode: els.stockImportMode.value,
+      updated: stocks.length,
+      skipped: errors.length,
+      errors,
+      snapshot
+    });
     await saveState();
     els.stockImportForm.reset();
     renderAll();
@@ -4471,8 +4648,33 @@ async function importStocks(event) {
     const skipped = errors.length ? `, ${errors.length} ignorée(s)` : "";
     setImportStatus(els.stockImportStatus, `${stocks.length} stock(s) mis à jour${skipped}.`, errors.length ? "warning" : "success");
   } catch {
+    restoreBusinessSnapshot(snapshot);
     setImportStatus(els.stockImportStatus, "Import impossible.", "warning");
   }
+}
+
+async function undoLastImport() {
+  const backup = state.lastImportBackup;
+  if (!backup?.snapshot) return;
+
+  const label = importTypeLabels[backup.type] || "import";
+  const fileLabel = backup.fileName ? ` (${backup.fileName})` : "";
+  if (!window.confirm(`Annuler le dernier import ${label}${fileLabel} ?`)) return;
+
+  restoreBusinessSnapshot(backup.snapshot);
+  state.importHistory = (state.importHistory || []).map((entry) => {
+    if (entry.id !== backup.importId) return entry;
+    return {
+      ...entry,
+      status: "undone",
+      undoneAt: new Date().toISOString()
+    };
+  });
+  state.lastImportBackup = null;
+
+  await saveState();
+  renderAll();
+  setStorageStatus("Import annulé", "success");
 }
 
 async function logout() {
@@ -4606,6 +4808,7 @@ els.forecastForm.addEventListener("submit", runForecast);
 els.batchForm.addEventListener("submit", addBatch);
 els.exportData.addEventListener("click", exportData);
 els.exportCsvButtons.forEach((button) => button.addEventListener("click", exportCsv));
+els.undoLastImport.addEventListener("click", undoLastImport);
 els.supplierImportForm.addEventListener("submit", importSuppliers);
 els.downloadSupplierTemplate.addEventListener("click", downloadSupplierTemplate);
 els.beanImportForm.addEventListener("submit", importBeans);
